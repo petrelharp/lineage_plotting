@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import pyslim, msprime
+import pyslim, tskit
 import numpy as np
 import spatial_slim as sps
 
@@ -44,8 +44,8 @@ def animate_individuals(ts, num_gens):
     ax.set_ylim(0, ymax)
     # colors
     colormap = lambda x: plt.get_cmap("cool")(x/max(ts.individual_ages))
-    inds = ts.individuals_by_time(num_gens)
-    next_inds = ts.individuals_by_time(num_gens - 1)
+    inds = ts.individuals_alive_at(num_gens)
+    next_inds = ts.individuals_alive_at(num_gens - 1)
     circles = ax.scatter(locs[inds, 0], locs[inds, 1], s=10, 
                          edgecolors=colormap([0 for _ in inds]),
                          facecolors='none')
@@ -56,15 +56,15 @@ def animate_individuals(ts, num_gens):
     ax.add_collection(lc)
 
     def update(frame):
-        inds = ts.individuals_by_time(frame)
-        next_inds = ts.individuals_by_time(frame - 1)
+        inds = ts.individuals_alive_at(frame)
+        next_inds = ts.individuals_alive_at(frame - 1)
         circles.set_offsets(locs[inds,:2])
         filled.set_offsets(locs[next_inds,:2])
         # color based on age so far
-        circles.set_color(colormap(ts.individuals_age(frame)[inds]))
-        filled.set_color(colormap(ts.individuals_age(frame)[next_inds]))
+        circles.set_color(colormap(ts.individual_ages_at(frame)[inds]))
+        filled.set_color(colormap(ts.individual_ages_at(frame)[next_inds]))
         if frame > 0:
-            new_inds = inds[ts.individuals_age(frame)[inds] == 0]
+            new_inds = inds[ts.individual_ages_at(frame)[inds] == 0]
             pcs = ts.individual_parents(new_inds, time=frame)
             lc.set_paths([locs[pc,:2] for pc in pcs])
         return circles, filled, lc

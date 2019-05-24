@@ -1,4 +1,4 @@
-import pyslim, msprime
+import pyslim, tskit
 import numpy as np
 import tqdm
 import scipy.sparse as sparse
@@ -22,7 +22,7 @@ class SpatialSlimTreeSequence(pyslim.SlimTreeSequence):
             raise ValueError("point not of the correct shape: must be coercible to"
                              + "a vector of length self.dim or less.")
 
-        return np.sqrt(np.sum((self.individual_locations() - point) ** 2, axis=1))
+        return np.sqrt(np.sum((self.individual_locations - point) ** 2, axis=1))
 
     def individuals_in_circle(self, center, radius, time=None):
         """
@@ -32,51 +32,8 @@ class SpatialSlimTreeSequence(pyslim.SlimTreeSequence):
         :param float radius: The radius of the circle.
         """
         dists = self.individual_distance_to_point(center)
-        these = np.logical_and(dists <= radius, self.individuals_alive(time))
-        return np.where(these)[0]
-
-    def individuals_alive(self, time):
-        """
-        Returns a logical array of length equal to the number of individuals that
-        indicates whether the given individual was alive at the given time.
-
-        TODO: Use the pyslim.INDIVIDUAL_ALIVE flag?
-
-        :param float time: The time ago. If `time` is None, then everyone will be
-            counted as being alive.
-        """
-        if time is None:
-            out = np.repeat(True, self.num_individuals)
-        else:
-            births = self.individual_times
-            ages = self.individual_ages
-            out = np.logical_and(births >= time, births - ages <= time)
-        return out
-
-    def individuals_age(self, time):
-        """
-        Returns the *ages* of each individual at the corresponding time ago,
-        which will be `nan` if the individual is either not born yet or dead.
-        This is computed as the time ago the indivdiual was born (found by the
-        `time` associated with the the indivdiual's nodes) minus the `time`
-        argument; while "death" is inferred from the individual's `age`,
-        recorded in metadata.
-
-        :param float time: The reference time ago.
-        """
-        ages = self.individual_times - time
-        ages[np.logical_not(self.individuals_alive(time))] = np.nan
-        return ages
-
-    def individuals_by_time(self, time):
-        """
-        Returns the IDs of individuals alive at the given time ago. Note that `age` is
-        recorded while the individual is still alive, and starts at 0. TODO: clarify
-        whether this is at `early()` or `late()` or what.
-
-        :param float time: The amount of time ago.
-        """
-        return np.where(self.individuals_alive(time))[0]
+        alive = self.individuals_alive_at(time)
+        return alive[dists <= radius]
 
     def node_children_dict(self, left=0.0, right=None):
         """
@@ -137,8 +94,8 @@ class SpatialSlimTreeSequence(pyslim.SlimTreeSequence):
             if edges.left < right and edges.right >= left:
                 parent = ts.node(e.parent).individual
                 child = ts.node(e.child).individual
-                if (parent is not msprime.NULL_INDIVIDUAL
-                     and child is not msprime.NULL_INDIVIDUAL):
+                if (parent is not tskit.NULL
+                     and child is not tskit.NULL):
                     out[parent].append(child)
         return out
 
@@ -161,8 +118,8 @@ class SpatialSlimTreeSequence(pyslim.SlimTreeSequence):
             if edge.left < right and edge.right >= left:
                 parent = self.node(edge.parent).individual
                 child = self.node(edge.child).individual
-                if (parent is not msprime.NULL_INDIVIDUAL
-                     and child is not msprime.NULL_INDIVIDUAL):
+                if (parent is not tskit.NULL
+                     and child is not tskit.NULL):
                     out[child].append(parent)
         return out
 
@@ -239,10 +196,12 @@ class SpatialSlimTreeSequence(pyslim.SlimTreeSequence):
         node_parents = self.node_parents(child_nodes, left=left, right=right)
         indiv_parents = np.column_stack((self.tables.nodes.individual[node_parents[:, 0]],
                                          self.tables.nodes.individual[node_parents[:, 1]]))
-        alive = self.individuals_alive(time)
-        yesthese = np.logical_and(indiv_parents[:,0] != msprime.NULL_INDIVIDUAL,
-                                  indiv_parents[:,1] != msprime.NULL_INDIVIDUAL,
-                                  np.isin(indiv_parents[:,1], alive))
+        yesthese = np.logical_and(indiv_parents[:,0] != tskit.NULL,
+                                  indiv_parents[:,1] != tskit.NULL)
+        if time is not None:
+             yesthese = np.logical_and(yesthese,
+                                       np.isin(indiv_parents[:,1],
+                                               self.individuals_alive_at(time)))
         return indiv_parents[yesthese, :]
 
     def individual_nodes(self, individuals, flatten=True):
@@ -256,32 +215,6 @@ class SpatialSlimTreeSequence(pyslim.SlimTreeSequence):
         if flatten:
             nodes = [x for y in nodes for x in y]
         return nodes
-
-    # NOTE: this and several other methods below *could* be @properties, but are not
-    # because that encourages people to, say, re-use them a lot instead of storing the results,
-    # which can be quite slow
-    def individual_times(self, inds=None):
-        if inds is None:
-            inds = self.individuals()
-        return np.fromiter(map(lambda x: x.time, inds), 'float')
-
-    def individual_ages(self, inds=None):
-        if inds is None:
-            inds = self.individuals()
-        return np.fromiter(map(lambda x: pyslim.decode_individual(x.metadata).age, inds), 'int')
-
-    def individual_populations(self, inds=None):
-        if inds is None:
-            inds = self.individuals()
-        return np.fromiter(map(lambda x: pyslim.decode_individual(x.metadata).population, inds), 'int')
-
-    def individual_locations(self, inds=None):
-        if inds is None:
-            inds = list(range(self.num_individuals))
-        locations = self.tables.individuals.location
-        locations.shape = (int(len(locations)/3), 3)
-        return locations[inds,:self.dim]
-
 
     def relatedness_matrix(self, left=0.0, right=None):
         """

@@ -15,8 +15,9 @@ def run_slim(script, seed = 23,
     scriptbase = "_".join(script.split(".")[:-1])
     if not os.path.isdir(scriptbase):
         os.mkdir(scriptbase)
+    kwstrings = [str(u) + "_" + str(kwargs[u]) for u in kwargs]
     base = os.path.join(scriptbase, 
-            "_".join(["run"] + list(map(str, kwargs.values())) + [str(seed)]))
+            "_".join(["run"] + kwstrings + ["seed_" + str(seed)]))
     treefile = base + ".trees"
     if os.path.isfile(treefile):
         print(treefile, "already exists.")
@@ -45,7 +46,7 @@ def plot_density(ts, time, ax, scatter=True, alpha=0.8):
     locs = ts.individual_locations[:,:2]
     xmax = max(locs[:,0])
     ymax = max(locs[:,1])
-    alive = ts.individuals_alive(time)
+    alive = ts.individuals_alive_at(time)
     tlocs = locs.T
     kde = scipy.stats.gaussian_kde(tlocs)
     X, Y = np.meshgrid(

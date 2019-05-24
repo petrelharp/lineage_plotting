@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import pyslim, msprime
+import pyslim, tskit
 import numpy as np
 import spatial_slim as sps
 
@@ -12,6 +12,8 @@ import matplotlib.animation as ani
 import matplotlib.collections as cs
 
 usage = """
+Makes an animation of the "pedigree trees", i.e., all the ancestors of the
+given number of randomly chosen individuals.
 Usage:
     {} (num gens) (num trees) (script name) [KEY=VALUE [KEY=VALUE]]
 where the KEY=VALUE pairs get passed to SLiM.
@@ -51,7 +53,7 @@ def animate_tree(ts, children, num_gens):
     # colors
     colormap = lambda x: plt.get_cmap("cool")(x/max(ts.individual_ages))
     # treecolors = [plt.get_cmap("viridis")(x) for x in np.linspace(0, 1, len(children))]
-    inds = ts.individuals_by_time(0)
+    inds = ts.individuals_alive_at(0)
     circles = ax.scatter(locs[inds, 0], locs[inds, 1], s=10, 
                          edgecolors=colormap([0 for _ in inds]),
                          facecolors='none')
@@ -62,11 +64,11 @@ def animate_tree(ts, children, num_gens):
     def update(frame):
         nonlocal children
         nonlocal paths
-        inds = ts.individuals_by_time(frame)
+        inds = ts.individuals_alive_at(frame)
         circles.set_offsets(locs[inds,:2])
         # color based on age so far
-        circles.set_color(colormap(ts.individuals_age(frame)[inds]))
-        newborns = children[ts.individuals_age(frame)[children] == 0]
+        circles.set_color(colormap(ts.individual_ages_at(frame)[inds]))
+        newborns = children[ts.individual_ages_at(frame)[children] == 0]
         pcs = ts.individual_parents(newborns)
         if len(pcs) > 0:
             children = np.concatenate((children, pcs[:,0]))
