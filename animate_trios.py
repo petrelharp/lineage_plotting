@@ -52,6 +52,8 @@ def animate_individuals(ts, num_gens):
     filled = ax.scatter(locs[next_inds, 0], locs[next_inds, 1], s=10, 
                         facecolors=colormap([0 for _ in next_inds]),
                         edgecolors='none')
+    lc = cs.LineCollection([], colors='black', linewidths=0.5)
+    ax.add_collection(lc)
 
     def update(frame):
         inds = ts.individuals_alive_at(frame)
@@ -60,7 +62,12 @@ def animate_individuals(ts, num_gens):
         filled.set_offsets(locs[next_inds,:2])
         # color based on age so far
         circles.set_color(colormap(ts.individual_ages_at(frame)[inds]))
-        return circles, filled
+        filled.set_color(colormap(ts.individual_ages_at(frame)[next_inds]))
+        if frame > 0:
+            new_inds = inds[ts.individual_ages_at(frame)[inds] == 0]
+            pcs = ts.individual_parents(new_inds, time=frame)
+            lc.set_paths([locs[pc,:2] for pc in pcs])
+        return circles, filled, lc
 
     animation = ani.FuncAnimation(fig, update, 
                                   frames=np.linspace(num_gens, 1, num_gens))
@@ -72,5 +79,5 @@ outbase = ".".join(treefile.split(".")[:-1])
 ts = sps.SpatialSlimTreeSequence(pyslim.load(treefile), dim=2)
 
 animation = animate_individuals(ts, num_gens)
-animation.save(outbase + ".pop.mp4", writer='ffmpeg')
+animation.save(outbase + ".trios.mp4", writer='ffmpeg')
 
