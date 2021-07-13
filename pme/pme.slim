@@ -1,0 +1,101 @@
+initialize() {
+	initializeSLiMModelType("nonWF");
+	initializeSLiMOptions(dimensionality="xy");
+	initializeTreeSeq();
+	initializeMutationRate(0.0);
+	initializeMutationType("m1", 0.5, "f", 0.0);
+	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElement(g1, 0, 1e8-1);
+	initializeRecombinationRate(1e-8);
+	
+	if (!exists("K")) defineConstant("K", 20);      // carrying capacity per unit area
+	if (!exists("DT")) defineConstant("DT", 0.1); // discretization factor for time
+	if (!exists("SIGMA")) defineConstant("SIGMA", 2.0);  // maximum interaction distance
+	if (!exists("DISPERSAL_SIGMA")) defineConstant("DISPERSAL_SIGMA", 2.0);  // parent-offspring distance
+	if (!exists("WIDTH")) defineConstant("WIDTH", 50);   // width in real units
+	if (!exists("HEIGHT")) defineConstant("HEIGHT", 10);   // width in real units
+	if (!exists("NUMGENS")) defineConstant("NUMGENS", asInteger(1000/DT)); // total number of generations to run for
+	if (!exists("OUTPATH")) catn("Warning: OUTPATH not defined, so no output will be produced.");
+	//writeFile("interaction_strengths_sigma" + SIGMA + "dispersal" + DISPERSAL_SIGMA + ".txt", "total_of_interaction_strengths_self");
+	
+	// spatial interaction for local competition
+	//   initializeInteractionType("i1", "xy", reciprocal=T,
+	//                             maxDistance = 3 * SIGMA);
+	//   i1.setInteractionFunction("n", 1.0/(2*PI*SIGMA^2), SIGMA);
+	initializeInteractionType("i1", "xy", reciprocal=T,
+		maxDistance = SIGMA);
+	i1.setInteractionFunction("f", 1.0/(PI*SIGMA^2));
+}
+
+
+// set up logging
+1 early() {
+	if (exists("OUTPATH")) {
+		log = sim.createLogFile(OUTPATH + ".log");
+		log.setLogInterval(20);
+		log.addGeneration();
+		log.addGenerationStage();
+		log.addPopulationSize();
+		log.addMeanSDColumns("neighbor_density", "i1.totalOfNeighborStrengths(p1.individuals);");
+	}
+	defineGlobal("TOTAL_SO_FAR", 0);
+}
+
+1 early() {
+	sim.rescheduleScriptBlock(s99, generations=NUMGENS);
+}
+
+1 early() {
+	sim.addSubpop("p1", asInteger(K*WIDTH*HEIGHT*0.05));
+	p1.setSpatialBounds(c(0.0, 0.0, WIDTH, HEIGHT));
+	for (ind in p1.individuals) {
+		ind.setSpatialPosition(p1.pointUniform() * c(0.05, 1));
+	}
+}
+
+reproduction() {
+	// density-dependent offspring production
+	neighbor_density = i1.totalOfNeighborStrengths(individual);
+	if (runif(1) < 1 - exp(-DT * neighbor_density / K)) {
+		mate = i1.drawByStrength(individual, 1);  // single mating
+		if (size(mate) > 0) {
+			offspring = p1.addCrossed(individual, mate);
+		} else {
+			offspring = p1.addSelfed(individual);
+		}
+		pos = individual.spatialPosition + rnorm(2, c(0,0), DISPERSAL_SIGMA);
+		offspring.setSpatialPosition(p1.pointReflected(pos));
+	}
+}
+
+early() { // survival probabilities
+	i1.evaluate();
+	inds = p1.individuals;
+	neighbor_density = i1.totalOfNeighborStrengths(inds);
+	inds.fitnessScaling = exp(-DT * (2 * neighbor_density / K - 1));
+}
+
+late() {
+	i1.evaluate();
+	inds = p1.individuals;
+	neighbor_density = i1.totalOfNeighborStrengths(inds);
+	//inds.color = colors(neighbor_density/max(neighbor_density), "jet");
+}
+
+late() {
+	if (p1.individualCount == 0) {
+		stop("The population has died out, in generation " + sim.generation);
+	}
+	defineGlobal("TOTAL_SO_FAR", TOTAL_SO_FAR + p1.individualCount);
+	//catn("density: " + p1.individualCount / (WIDTH * HEIGHT) + " mean so far: " + TOTAL_SO_FAR / (WIDTH * HEIGHT * sim.generation));
+	catn(p1.individualCount / (WIDTH * HEIGHT) + "," + mean(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2)) + "," + var(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2)));
+}
+
+s99 2000 late() {
+	if (exists("OUTPATH")) sim.treeSeqOutput(OUTPATH);
+	sim.outputUsage();
+	//writeFile("interaction_strengths_sigma" + SIGMA + "dispersal" + DISPERSAL_SIGMA + ".txt", paste(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2), sep = "\n"), append = T);
+	catn("Done.");
+	sim.simulationFinished();
+}
+

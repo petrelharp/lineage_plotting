@@ -1,0 +1,72 @@
+# A population analogue of the porous media equation
+
+We'd like to do an analogue of
+$$
+    \partial_t n(t, x) = \partial_x^2 \left(n(t, x)^2\right) + n(t,x) (1 - n(t, x)) .
+$$
+To do this, if the death, birth, and establishment rates are $\mu$, $\gamma$, and $r$ respectively, since
+$$
+    \partial_t n(t, x) = r(x, t) \partial_x^2 \left(\gamma(x, t) n(t, x)\right) + n(t,x) \left(\gamma(x, t) - \mu(x, t)\right) ,
+$$
+we'll set $r(x, t) = 1$, and rescale by carrying capacity so that $n(x, t) = N(x, t) / K$,
+and so if $\gamma = n = N / K$ and $\mu = 2 n - 1 = 2 N / K - 1$ then this is
+$$
+    \partial_t N(t, x) = \partial_x^2 \left(\gamma(x, t) N(t, x) \right) + N(t,x) \left(\gamma(x, t) - \mu(x, t)\right) .
+$$
+To check: at equilibrium, $\mu = \gamma$, which happens when $N = K$.
+
+*However*, we're working in discrete time,
+and death probabilities must be positive, so let's adjust this so that the 
+
+Reproduction will be Poisson, so here's the actual curves:
+```{r plot_curves, fig.width=10}
+dt <- 0.1
+K <- 20
+mu <- function (N, K) { pmax(0, pmin(1, 1 - exp(-dt * (2 * N / K - 1)))) }
+gamma <- function (N, K) { pmax(0, pmin(1, 1 - exp(-dt * N / K ))) }
+layout(t(1:2))
+for (max_N in c(40, 1000)) {
+    x <- data.frame(N=1:max_N)
+    x$mu <- mu(x$N, K)
+    x$gamma <- gamma(x$N, K)
+    x$diff <- x$gamma - x$mu
+    matplot(x$N, as.matrix(x[,c('mu', 'gamma', 'diff')]), type='l', lty=1,
+            xlab='N', ylab='per capita number')
+    legend('topleft', lty=1, col=1:3, legend=c('mu', 'gamma', 'diff'))
+    abline(v=K, lty=3)
+}
+```
+
+Each individual:
+
+1. produces a single offspring with probability $1 - exp(-dt \gamma)$, and then
+2. dies with probability $1 - \exp(-dt \mu)$.
+
+*Note:* at first we had offspring number equal to $dt \gamma$; but this produces unstable populations at large $N$,
+so now "reproduction of a single offspring happens at rate $\gamma$, but only once per time step", like death.
+
+So, the average net contribution to the next generation per capita is 
+$$\begin{aligned}
+    1 - e^{-dt \gamma}  + e^{-dt \mu}
+    &=
+        1 - e^{-dt N/K}  + e^{-dt (2 N / K - 1)}
+\end{aligned}$$
+At $N=K$ this is stable, since this is equal to:
+$$\begin{aligned}
+    1 - e^{-dt}  + e^{-dt} = 1
+\end{aligned}$$
+
+```{r per_capita}
+next_gen <- function(N, K) {
+    offspring <- rbinom(length(N), size=N, prob=gamma(N, K))
+    survivors <- rbinom(length(N), size=N, prob=1 - mu(N, K))
+    return(offspring + survivors)
+}
+Nmat <- matrix(NA, nrow=100, ncol=30)
+Nmat[1,] <- 1:ncol(Nmat)
+for (k in 2:nrow(Nmat)) {
+    Nmat[k, ] <- next_gen(Nmat[k-1,], K)
+}
+matplot(Nmat, type='l', log='y')
+```
+

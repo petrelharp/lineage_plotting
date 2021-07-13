@@ -1,22 +1,31 @@
 initialize() {
     initializeSLiMModelType("nonWF");
-    initializeSLiMOptions(dimensionality="xy");
+    initializeSLiMOptions(dimensionality="xy", periodicity="xy");
     initializeTreeSeq();
 
     if (!exists("seed")) {
-      seed = getSeed(); 
+      seed = getSeed();
     }
     if (!exists("NUMGENS")) {
-      defineConstant("NUMGENS", 30); 
+      defineConstant("NUMGENS", 30);
     }
     if (!exists("W")) {
-      defineConstant("W", 10.0);  // width of the simulated area 
+      defineConstant("W", 10.0);  // width of the simulated area
     }
-    if (!exists("OUTPATH")) { 
-      defineConstant("OUTPATH", "test_flat_map." + NUMGENS + "." + seed + ".trees"); 
+    if (!exists("OUTPATH")) {
+      defineConstant("OUTPATH", "test_torus." + NUMGENS + "." + seed + ".trees");
     }
-    if (!exists("SIGMA")) {
+    if (!exists("SIGMA")) { // default sigma
       defineConstant("SIGMA", 0.3);
+    }
+    if (!exists("SD")) { // sigma_D, the dispersal distance
+      defineConstant("SD", SIGMA);
+    }
+    if (!exists("SI")) {
+      defineConstant("SI", SIGMA);
+    }
+    if (!exists("SM")) {
+      defineConstant("SM", SIGMA);  // sigma_M, the mate choice distance
     }
     if (!exists("K")) {
       defineConstant("K", 5);  // carrying-capacity per unit square (roughly)
@@ -32,11 +41,8 @@ initialize() {
     catn(c("K =", K));
     defineConstant("A", 1.0);  // height/width of the simulated area
     catn(c("A =", A));
-    defineConstant("SD", SIGMA);  // sigma_D, the dispersal distance
     catn(c("SD =", SD));
-    defineConstant("SI", SIGMA);  // sigma_I, the spatial interaction distance
     catn(c("SI =", SI));
-    defineConstant("SM", SI);  // sigma_M, the mate choice distance
     catn(c("SM =", SM));
     defineConstant("L", 4);    // mean lifetime at stationarity
     catn(c("L =", L));
@@ -51,19 +57,18 @@ initialize() {
     initializeGenomicElement(g1, 0, G-1);
     initializeMutationRate(0.0);
     initializeRecombinationRate(1e-9);
-    
-    // spatial competition
-    initializeInteractionType(1, "xy", reciprocal=T, maxDistance=SI * 3);
-    i1.setInteractionFunction("n", 1.0/(2*PI*SI^2), SI);
-    
+
     // mate choice
-    initializeInteractionType(2, "xy", reciprocal=T, maxDistance=SM * 3);
-    i2.setInteractionFunction("n", 1.0/(2*PI*SM^2), SM);
+    initializeInteractionType(1, "xy", reciprocal=T, maxDistance=SM * 3);
+    i1.setInteractionFunction("n", 1.0/(2*PI*SM^2), SM);
+    // spatial mortality effects
+    initializeInteractionType(2, "xy", reciprocal=T, maxDistance=SI * 3);
+    i2.setInteractionFunction("n", 1.0/(2*PI*SI^2), SI);
 }
 
 reproduction() {
-    // choose our nearest neighbor as a mate, within the max distance
-    mate = i2.drawByStrength(individual, 1);
+    // choose a neighbor as a mate
+    mate = i1.drawByStrength(individual, 1);
     if (mate.size()) {
         nOff = rpois(1, FECUN);
         // record number of offspring in the tag
@@ -101,15 +106,12 @@ reproduction() {
 }
 
 early() {
-    i1.evaluate(p1);
+    i2.evaluate(p1);
     inds = p1.individuals;
-    competition = i1.totalOfNeighborStrengths(inds);
+    competition = i2.totalOfNeighborStrengths(inds);
     // record strength of competition in the tagF
     inds.tagF = competition;
-    inds.fitnessScaling = pmin(0.95, 1/(1 + RHO * competition));    
-    // avoid edge effects
-    inds.fitnessScaling = inds.fitnessScaling * pmin(sqrt(inds.x/SI), 1.0) * pmin(sqrt(inds.y/SI), 1.0) * pmin(sqrt((W - inds.x)/SI), 1.0) * pmin(sqrt((A * W - inds.y)/SI), 1.0);
-
+    inds.fitnessScaling = 1/(1 + RHO * competition);
 }
 
 s2 1: early() {
@@ -119,7 +121,7 @@ s2 1: early() {
 
 1: late() {
    // to be ready for mate choice
-   i2.evaluate(p1);
+   i1.evaluate(p1);
 }
 
 // output
@@ -142,7 +144,7 @@ late() {
         catn(" " + clock());
     }
 }
-    
+
 2: late() {
     // GUI COLORS
     //  green = many neighbors, few offspring so far

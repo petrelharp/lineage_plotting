@@ -1,25 +1,47 @@
+// From the paper with Tom (firstversion.pdf):
+// - total of N individuals
+// - time is sped up by theta (-> infinity)
+// - nearly critical: mean net number of offspring scaling like 1/theta
+// - dispersal scaling to be Gaussian, so if dispersal distance is SD,
+//     need theta * SD^2 of order 1, ie, SD ~ 1/sqrt(theta)
+// - to get deterministic, need theta/N -> 0
+// - to get superprocess, need theta/N -> rho > 0
+//    and so we need the deviation of mortality from fecundity needs to be divided by theta
+//
+// So: we will set
+// - W = 20
+// - density theta/rho = K so N = K * W^2 = theta/rho * 400
+// - dispersal distance = SD = 1/sqrt(theta)
+// - interaction distance = SI * SD
+// - Note that the neighborhood size is SD^2 * K = 1/rho
+// - NUMGENS = theta * 10
+//
+// So:
+// - theta = 1/SD^2
+// - rho = 1/neighborhood size = 1/(SD^2 * K)
+
 initialize() {
     initializeSLiMModelType("nonWF");
-    initializeSLiMOptions(dimensionality="xy");
+    initializeSLiMOptions(dimensionality="xy", periodicity="xy");
     initializeTreeSeq();
 
     if (!exists("seed")) {
-      seed = getSeed(); 
+      seed = getSeed();
     }
     if (!exists("NUMGENS")) {
-      defineConstant("NUMGENS", 30); 
+      defineConstant("NUMGENS", 30);
     }
-    if (!exists("W")) {
-      defineConstant("W", 10.0);  // width of the simulated area 
+    if (!exists("OUTPATH")) {
+      defineConstant("OUTPATH", "test_torus." + NUMGENS + "." + seed + ".trees");
     }
-    if (!exists("OUTPATH")) { 
-      defineConstant("OUTPATH", "test_valleys." + NUMGENS + "." + seed + ".trees"); 
+    if (!exists("RHO")) { // 1/neighborhood size
+      defineConstant("RHO", 1.0);
     }
-    if (!exists("SIGMA")) {
-      defineConstant("SIGMA", 0.3);
+    if (!exists("THETA")) { // 1/SD^2
+      defineConstant("THETA", 1.0);
     }
-    if (!exists("K")) {
-      defineConstant("K", 5);  // carrying-capacity per unit square (roughly)
+    if (!exists("REL_SI")) { // relative interaction distance
+      defineConstant("REL_SI", 1.0);
     }
     if (!exists("BURNIN")) {
       defineConstant("BURNIN", 200);  // number of generations before full recording begins
@@ -27,16 +49,20 @@ initialize() {
 
     catn(c("NUMGENS =", NUMGENS));
     catn(c("BURNIN =", BURNIN));
-    catn(c("W =", W));
-    catn(c("SIGMA =", SIGMA));
+    catn(c("RHO =", RHO));
+    catn(c("THETA =", THETA));
+    defineConstant("K", THETA/RHO);
     catn(c("K =", K));
-    defineConstant("A", 4.0/11);  // height/width of the simulated area
+    defineConstant("W", 20.0);  // width of the simulated area
+    catn(c("W =", W));
+    defineConstant("A", 1.0);  // height/width of the simulated area
     catn(c("A =", A));
-    defineConstant("SD", SIGMA);  // sigma_D, the dispersal distance
+    defineConstant("SD", 1.0/sqrt(THETA));  // dispersal distance
     catn(c("SD =", SD));
-    defineConstant("SI", SIGMA);  // sigma_I, the spatial interaction distance
+    catn(c("REL_SI =", REL_SI));
+    defineConstant("SI", REL_SI * SD); // interaction distance
     catn(c("SI =", SI));
-    defineConstant("SM", SI);  // sigma_M, the mate choice distance
+    defineConstant("SM", SI);
     catn(c("SM =", SM));
     defineConstant("L", 4);    // mean lifetime at stationarity
     catn(c("L =", L));
@@ -44,38 +70,39 @@ initialize() {
     catn(c("G =", G));
     defineConstant("FECUN", 1/L); // mean fecundity
     catn(c("FECUN =", FECUN));
-    defineConstant("RHO", FECUN/((1+FECUN) * K)); // constant in spatial competition function
+    defineConstant("CONST", FECUN/((1+FECUN) * K)); // constant in spatial competition function
 
     initializeMutationType("m1", 0.5, "g", 0.0, 2);
     initializeGenomicElementType("g1", m1, 1.0);
     initializeGenomicElement(g1, 0, G-1);
     initializeMutationRate(0.0);
     initializeRecombinationRate(1e-9);
-    
-    // spatial competition
-    initializeInteractionType(1, "xy", reciprocal=T, maxDistance=SI * 3);
-    i1.setInteractionFunction("n", 1.0/(2*PI*SI^2), SI);
-    
+
     // mate choice
-    initializeInteractionType(2, "xy", reciprocal=T, maxDistance=SM * 3);
-    i2.setInteractionFunction("n", 1.0/(2*PI*SM^2), SM);
+    initializeInteractionType(1, "xy", reciprocal=T, maxDistance=min(W*0.49, SM * 6));
+    i1.setInteractionFunction("n", 1.0/(2*PI*SM^2), SM);
+    // spatial mortality effects
+    initializeInteractionType(2, "xy", reciprocal=T, maxDistance=min(W*0.49, SI * 3));
+    i2.setInteractionFunction("n", 1.0/(2*PI*SI^2), SI);
 }
 
 reproduction() {
-    // choose our nearest neighbor as a mate, within the max distance
-    mate = i2.drawByStrength(individual, 1);
+    // choose a neighbor as a mate
+    mate = i1.drawByStrength(individual, 1);
     if (mate.size()) {
         nOff = rpois(1, FECUN);
         // record number of offspring in the tag
         individual.tag = individual.tag + nOff;
-        for (i in seqLen(rpois(1, 1/L))) {
+        for (i in seqLen(nOff)) {
             pos = individual.spatialPosition + rnorm(2, 0, SD);
             if (p1.pointInBounds(pos)) {
-            offspring = subpop.addCrossed(individual, mate);
-             offspring.setSpatialPosition(p1.pointReflected(pos));
-             offspring.tag = 0;
-             }
+              offspring = subpop.addCrossed(individual, mate);
+              offspring.setSpatialPosition(p1.pointReflected(pos));
+              offspring.tag = 0;
+            }
         }
+    } else {
+       catn("couldn't find a mate!!");
     }
     return;
 }
@@ -92,20 +119,6 @@ reproduction() {
 
     sim.rescheduleScriptBlock(s2, start=BURNIN+1, end=BURNIN + NUMGENS);
     sim.rescheduleScriptBlock(s99, generations=BURNIN + NUMGENS);
-    
-       
-    // make the spatial map:
-    a = 0.5; // marginal habitat
-    g = 1.5; // good habitat
-    r = 0.4; // ridge
-    x = 0.1; // bad habitat
-    defineConstant("mapValues",
-      c(x, r, a, x, x, x, r, x, x, a, x,
-        x, g, g, g, g, r, r, r, g, g, r,
-        x, g, a, g, g, r, r, r, a, g, x,
-        x, x, a, g, a, x, x, x, x, x, x));
-    p1.defineSpatialMap("Kmap", "xy", c(11, 4), mapValues, interpolate=T,
-        valueRange=c(x, g), colors=c("red", "yellow"));
 
     // header info
     cat("gen" + " " + "stage" + " ");
@@ -115,20 +128,12 @@ reproduction() {
 }
 
 early() {
-    i1.evaluate(p1);
+    i2.evaluate(p1);
     inds = p1.individuals;
-    competition = i1.totalOfNeighborStrengths(inds);
+    competition = i2.totalOfNeighborStrengths(inds);
     // record strength of competition in the tagF
     inds.tagF = competition;
-    // inds.fitnessScaling = pmin(0.95, 1/(1 + RHO * competition));    
-    // adjust for local habitat quality
-    for (ind in inds) {
-        Klocal = p1.spatialMapValue("Kmap", ind.spatialPosition);
-        ind.fitnessScaling = pmin(0.95, 1/(1 + RHO * ind.tagF / Klocal));
-    }
-    // avoid edge effects
-    inds.fitnessScaling = inds.fitnessScaling * pmin(sqrt(inds.x/SI), 1.0) * pmin(sqrt(inds.y/SI), 1.0) * pmin(sqrt((W - inds.x)/SI), 1.0) * pmin(sqrt((A * W - inds.y)/SI), 1.0);
-
+    inds.fitnessScaling = pmin(1.0, (1 - FECUN * (1 - (1/THETA) * (1 - competition / K))));
 }
 
 s2 1: early() {
@@ -138,7 +143,7 @@ s2 1: early() {
 
 1: late() {
    // to be ready for mate choice
-   i2.evaluate(p1);
+   i1.evaluate(p1);
 }
 
 // output
@@ -161,7 +166,7 @@ late() {
         catn(" " + clock());
     }
 }
-    
+
 2: late() {
     // GUI COLORS
     //  green = many neighbors, few offspring so far
