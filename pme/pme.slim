@@ -1,7 +1,7 @@
 initialize() {
 	initializeSLiMModelType("nonWF");
 	initializeSLiMOptions(dimensionality="xy");
-	initializeTreeSeq();
+	initializeTreeSeq(retainCoalescentOnly=F);
 	initializeMutationRate(0.0);
 	initializeMutationType("m1", 0.5, "f", 0.0);
 	initializeGenomicElementType("g1", m1, 1.0);
@@ -10,10 +10,10 @@ initialize() {
 	
 	if (!exists("K")) defineConstant("K", 20);      // carrying capacity per unit area
 	if (!exists("DT")) defineConstant("DT", 0.1); // discretization factor for time
-	if (!exists("SIGMA")) defineConstant("SIGMA", 2.0);  // maximum interaction distance
-	if (!exists("DISPERSAL_SIGMA")) defineConstant("DISPERSAL_SIGMA", 2.0);  // parent-offspring distance
-	if (!exists("WIDTH")) defineConstant("WIDTH", 50);   // width in real units
-	if (!exists("HEIGHT")) defineConstant("HEIGHT", 10);   // width in real units
+	if (!exists("SIGMA")) defineConstant("SIGMA", 0.2);  // maximum interaction distance
+	if (!exists("DISPERSAL_SIGMA")) defineConstant("DISPERSAL_SIGMA", 0.2);  // parent-offspring distance
+	if (!exists("WIDTH")) defineConstant("WIDTH", 20);   // width in real units
+	if (!exists("HEIGHT")) defineConstant("HEIGHT", 5);   // width in real units
 	if (!exists("NUMGENS")) defineConstant("NUMGENS", asInteger(1000/DT)); // total number of generations to run for
 	if (!exists("OUTPATH")) catn("Warning: OUTPATH not defined, so no output will be produced.");
 	//writeFile("interaction_strengths_sigma" + SIGMA + "dispersal" + DISPERSAL_SIGMA + ".txt", "total_of_interaction_strengths_self");
@@ -56,7 +56,7 @@ initialize() {
 late() {
 	// shift into frame of reference of wave front
 	inds = p1.individuals;
-	inds.x = inds.x - DT;
+	inds.x = inds.x - DT * DISPERSAL_SIGMA / 5;
 }
 
 reproduction() {
@@ -93,8 +93,14 @@ late() {
 		stop("The population has died out, in generation " + sim.generation);
 	}
 	defineGlobal("TOTAL_SO_FAR", TOTAL_SO_FAR + p1.individualCount);
-	//catn("density: " + p1.individualCount / (WIDTH * HEIGHT) + " mean so far: " + TOTAL_SO_FAR / (WIDTH * HEIGHT * sim.generation));
-	catn(p1.individualCount / (WIDTH * HEIGHT) + "," + mean(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2)) + "," + var(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2)));
+	if (!exists("OUTPATH")) {
+		//catn("density: " + p1.individualCount / (WIDTH * HEIGHT) + " mean so far: " + TOTAL_SO_FAR / (WIDTH * HEIGHT * sim.generation));
+		catn(p1.individualCount / (WIDTH * HEIGHT) + "," + mean(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2)) + "," + var(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2)));
+	}
+}
+
+late() {
+	sim.treeSeqRememberIndividuals(p1.individuals, permanent=F);
 }
 
 s99 2000 late() {
