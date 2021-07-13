@@ -46,11 +46,17 @@ initialize() {
 }
 
 1 early() {
-	sim.addSubpop("p1", asInteger(K*WIDTH*HEIGHT*0.05));
+	sim.addSubpop("p1", asInteger(K*WIDTH*HEIGHT*0.5));
 	p1.setSpatialBounds(c(0.0, 0.0, WIDTH, HEIGHT));
 	for (ind in p1.individuals) {
-		ind.setSpatialPosition(p1.pointUniform() * c(0.05, 1));
+		ind.setSpatialPosition(p1.pointUniform() * c(0.5, 1));
 	}
+}
+
+late() {
+	// shift into frame of reference of wave front
+	inds = p1.individuals;
+	inds.x = inds.x - DT;
 }
 
 reproduction() {
@@ -72,7 +78,7 @@ early() { // survival probabilities
 	i1.evaluate();
 	inds = p1.individuals;
 	neighbor_density = i1.totalOfNeighborStrengths(inds);
-	inds.fitnessScaling = exp(-DT * (2 * neighbor_density / K - 1));
+	inds.fitnessScaling = exp(-DT * (2 * neighbor_density / K - 1)) * asFloat(inds.x > 0);
 }
 
 late() {
