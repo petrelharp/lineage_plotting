@@ -15,7 +15,7 @@ initialize() {
 	if (!exists("WIDTH")) defineConstant("WIDTH", 20);   // width in real units
 	if (!exists("HEIGHT")) defineConstant("HEIGHT", 5);   // width in real units
 	if (!exists("NUMGENS")) defineConstant("NUMGENS", asInteger(1000/DT)); // total number of generations to run for
-	if (!exists("OUTPATH")) catn("Warning: OUTPATH not defined, so no output will be produced.");
+	if (!exists("OUTPATH")) defineConstant("OUTPATH", "pme.trees");//catn("Warning: OUTPATH not defined, so no output will be produced.");
 	//writeFile("interaction_strengths_sigma" + SIGMA + "dispersal" + DISPERSAL_SIGMA + ".txt", "total_of_interaction_strengths_self");
 	
 	// spatial interaction for local competition
@@ -55,8 +55,8 @@ initialize() {
 
 late() {
 	// shift into frame of reference of wave front
-	inds = p1.individuals;
-	inds.x = inds.x - DT * DISPERSAL_SIGMA / 2;
+	//inds = p1.individuals;
+	//inds.x = inds.x - DT * DISPERSAL_SIGMA / 2;
 }
 
 reproduction() {
@@ -100,7 +100,7 @@ late() {
 }
 
 late() {
-	sim.treeSeqRememberIndividuals(p1.individuals, permanent=F);
+	sim.treeSeqRememberIndividuals(p1.individuals, permanent=T);
 }
 
 s99 2000 late() {
