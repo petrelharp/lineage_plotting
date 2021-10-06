@@ -1,0 +1,104 @@
+initialize() {
+	initializeSLiMModelType("nonWF");
+	initializeSLiMOptions(dimensionality="x");
+	initializeTreeSeq(retainCoalescentOnly=F);
+	initializeMutationRate(0.0);
+	initializeMutationType("m1", 0.5, "f", 0.0);
+	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElement(g1, 0, 1e8-1);
+	initializeRecombinationRate(1e-8);
+	
+	if (!exists("K")) defineConstant("K", 1000);      // carrying capacity per unit area
+	if (!exists("DT")) defineConstant("DT", 0.1); // discretization factor for time
+	if (!exists("SIGMA")) defineConstant("SIGMA", 0.8);  // maximum interaction distance
+	if (!exists("DISPERSAL_SIGMA")) defineConstant("DISPERSAL_SIGMA", 0.8);  // parent-offspring distance
+	if (!exists("WIDTH")) defineConstant("WIDTH", 20);   // width in real units
+	if (!exists("NUMGENS")) defineConstant("NUMGENS", asInteger(500/DT)); // total number of generations to run for
+	if (!exists("OUTPATH")) defineConstant("OUTPATH", "pme_1d_small.trees");//catn("Warning: OUTPATH not defined, so no output will be produced.");
+	
+	// spatial interaction for local competition
+	   initializeInteractionType("i1", "x", reciprocal=T,
+	                             maxDistance = 3 * SIGMA);
+	   i1.setInteractionFunction("n", 1.0/(sqrt(2*PI)*SIGMA), SIGMA);
+}
+
+
+// set up logging
+1 early() {
+	if (exists("OUTPATH")) {
+		log = sim.createLogFile(OUTPATH + ".log");
+		log.setLogInterval(20);
+		log.addGeneration();
+		log.addGenerationStage();
+		log.addPopulationSize();
+		log.addMeanSDColumns("neighbor_density", "i1.totalOfNeighborStrengths(p1.individuals);");
+	}
+}
+
+1 early() {
+	sim.rescheduleScriptBlock(s99, generations=NUMGENS);
+}
+
+1 early() {
+	sim.addSubpop("p1", asInteger(K*WIDTH*0.2));
+	p1.setSpatialBounds(c(0.0,WIDTH));
+	for (ind in p1.individuals) {
+		ind.setSpatialPosition(p1.pointUniform() * 0.2);
+	}
+}
+
+late() {
+	// shift into frame of reference of wave front
+	//inds = p1.individuals;
+	//inds.x = inds.x - DT * DISPERSAL_SIGMA / 2;
+}
+
+reproduction() {
+	// density-dependent offspring production
+	neighbor_density = i1.totalOfNeighborStrengths(individual);
+	// Each individual produces a single offspring with probability 1−exp(−dt*gamma), gamma = N/K
+	if (runif(1) < 1 - exp(-DT * neighbor_density / K)) {
+		mate = i1.drawByStrength(individual, 1);  // single mating
+		if (size(mate) > 0) {
+			offspring = p1.addCrossed(individual, mate);
+		} else {
+			offspring = p1.addSelfed(individual);
+		}
+		pos = individual.spatialPosition + rnorm(1, 0, DISPERSAL_SIGMA);
+		offspring.setSpatialPosition(p1.pointReflected(pos));
+	}
+}
+
+early() { // survival probabilities
+	i1.evaluate();
+	inds = p1.individuals;
+	neighbor_density = i1.totalOfNeighborStrengths(inds);
+	
+	// Each individual has probability of dying 1−exp(−dt*mu), mu = 2N/K - 1
+	inds.fitnessScaling = exp(-DT * (2 * neighbor_density / K - 1)) * asFloat(inds.x > 0);
+}
+
+late() {
+	i1.evaluate();
+	inds = p1.individuals;
+	neighbor_density = i1.totalOfNeighborStrengths(inds);
+	//inds.color = colors(neighbor_density/max(neighbor_density), "jet");
+}
+
+late() {
+	if (p1.individualCount == 0) {
+		stop("The population has died out, in generation " + sim.generation);
+	}
+}
+
+late() {
+	sim.treeSeqRememberIndividuals(p1.individuals, permanent=T);
+}
+
+s99 2000 late() {
+	if (exists("OUTPATH")) sim.treeSeqOutput(OUTPATH, metadata = Dictionary("DISPERSAL_SIGMA", DISPERSAL_SIGMA, "K", K, "DT", DT));
+	sim.outputUsage();
+	catn("Done.");
+	sim.simulationFinished();
+}
+
