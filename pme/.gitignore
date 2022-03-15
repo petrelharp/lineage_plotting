@@ -1,0 +1,4 @@
+*.log
+.ipynb_checkpoints
+pme.md
+figure/

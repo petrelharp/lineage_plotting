@@ -7,69 +7,102 @@ initialize() {
 	initializeGenomicElementType("g1", m1, 1.0);
 	initializeGenomicElement(g1, 0, 1e8-1);
 	initializeRecombinationRate(1e-8);
+
+	// These are default params that can be modified with -d at runtime
+	// or read in from "params.slim" (NOTE: params.slim will override these!)
+	// The file params.slim will be read from the working directory, or
+	// from OUTDIR if this is defined on the command line.
+	defaults = Dictionary(	
+		"THETA", 10,  // inverse of difference in per-capita birth and death rates
+		"K", 100,	  // carrying capacity per unit area
+		"MIN_DENSITY", 4/7, // threshold for density dependence on N/K
+		"DT", 0.1, // discretization factor for time
+		"EPSILON", 0.2,  // interaction distance
+		"DISPERSAL_SIGMA", 1.0,  // parent-offspring distance
+		"WIDTH", 20,   // width in real units
+		"HEIGHT", 5,   // width in real units
+		"OUTDIR", exists("OUTDIR") ? OUTDIR else ".",
+		"RUNTIME", 1000, // amount of time to run for (so, RUNTIME/DT 'generations')
+		"DEBUG", T  // whether to compute expensive debugging things and not record tree sequences
+	);
+	paramfile = defaults.getValue("OUTDIR") + "/" + "params.json";
+	if (fileExists(paramfile)) {
+		local_params = Dictionary(paste(readFile(paramfile), sep="\n"));
+		defaults.addKeysAndValuesFrom(local_params);
+		defaults.setValue("read_from_paramfile", paramfile);
+	}	
+	defaults.setValue("OUTPATH", defaults.getValue("OUTDIR") + "/pme_" + getSeed() + ".trees");
+	defaults.setValue("LOGPATH", defaults.getValue("OUTDIR") + "/pme_" + getSeed() + ".log");
+	defaults.setValue("IMAGEPATH", defaults.getValue("OUTDIR") + "/pme_" + getSeed() + "_");
 	
-	if (!exists("K")) defineConstant("K", 40);      // carrying capacity per unit area
-	if (!exists("DT")) defineConstant("DT", 0.1); // discretization factor for time
-	if (!exists("SIGMA")) defineConstant("SIGMA", 0.2);  // maximum interaction distance
-	if (!exists("DISPERSAL_SIGMA")) defineConstant("DISPERSAL_SIGMA", 0.2);  // parent-offspring distance
-	if (!exists("WIDTH")) defineConstant("WIDTH", 20);   // width in real units
-	if (!exists("HEIGHT")) defineConstant("HEIGHT", 5);   // width in real units
-	if (!exists("NUMGENS")) defineConstant("NUMGENS", asInteger(1000/DT)); // total number of generations to run for
-	if (!exists("OUTPATH")) defineConstant("OUTPATH", "pme.trees");//catn("Warning: OUTPATH not defined, so no output will be produced.");
-	//writeFile("interaction_strengths_sigma" + SIGMA + "dispersal" + DISPERSAL_SIGMA + ".txt", "total_of_interaction_strengths_self");
+	catn("-------------\n");
+	for (k in defaults.allKeys) {
+		if (!exists(k)) {
+			defineConstant(k, defaults.getValue(k));
+		} else {
+			defaults.setValue(k, executeLambda(paste(c(k, ";"), sep='')));
+		}
+		if (k != "README")
+			catn("  " + k + ": " + defaults.getValue(k));
+	}
+	catn("-------------\n");
+	defineGlobal("params", defaults);
 	
+	catn("theta / pop. density  = " + THETA / K + " (deterministic is -> 0)");
+	catn("(dispersal) neighborhood size = " + 4 * K * DISPERSAL_SIGMA + " (d=1) " + 4 * PI * K * DISPERSAL_SIGMA^2 + "(d=2)");
+	catn("interaction neighborhood = " + 4 * K * EPSILON + " (d=1) " + 4 * PI * K * EPSILON^2 + "(d=2)");
+	catn("dispersal / interaction =  " + DISPERSAL_SIGMA / EPSILON + " (< 1 is patchy)");
+
 	// spatial interaction for local competition
-	   initializeInteractionType("i1", "xy", reciprocal=T,
-	                             maxDistance = 3 * SIGMA);
-	   i1.setInteractionFunction("n", 1.0/(2*PI*SIGMA^2), SIGMA);
-//	initializeInteractionType("i1", "xy", reciprocal=T,
-//		maxDistance = SIGMA);
-//	i1.setInteractionFunction("f", 1.0/(PI*SIGMA^2));
+	initializeInteractionType("i1", "xy", reciprocal=T,
+		maxDistance = 3 * EPSILON);
+	i1.setInteractionFunction("n", 1.0/(2*PI*EPSILON^2), EPSILON);
 }
 
 
 // set up logging
 1 early() {
-	if (exists("OUTPATH")) {
+	if (!DEBUG) {
 		log = sim.createLogFile(OUTPATH + ".log");
 		log.setLogInterval(20);
 		log.addGeneration();
 		log.addGenerationStage();
 		log.addPopulationSize();
-		log.addMeanSDColumns("neighbor_density", "i1.totalOfNeighborStrengths(p1.individuals);");
+		log.addCustomColumn("time", "sim.generation * DT;");
+		log.addMeanSDColumns("neighbor_density", "i1.localPopulationDensity(p1.individuals);");
 	}
-	defineGlobal("TOTAL_SO_FAR", 0);
 }
 
 1 early() {
-	sim.rescheduleScriptBlock(s99, generations=NUMGENS);
+	sim.rescheduleScriptBlock(s98, generations=unique(asInteger(seq(1, RUNTIME / DT - 1, length=20))));
+	sim.rescheduleScriptBlock(s99, generations=asInteger(RUNTIME / DT)); // end
 }
 
 1 early() {
-	sim.addSubpop("p1", asInteger(K*WIDTH*HEIGHT*0.5));
+	sim.addSubpop("p1", asInteger(K*WIDTH*HEIGHT*0.25));
 	p1.setSpatialBounds(c(0.0, 0.0, WIDTH, HEIGHT));
 	for (ind in p1.individuals) {
-		ind.setSpatialPosition(p1.pointUniform() * c(0.5, 1));
+		ind.setSpatialPosition(p1.pointUniform() * c(0.25, 1));
 	}
 }
 
-late() {
-	// shift into frame of reference of wave front
-	//inds = p1.individuals;
-	//inds.x = inds.x - DT * DISPERSAL_SIGMA / 2;
-}
+// late() {
+// 	// shift into frame of reference of wave front
+// 	inds = p1.individuals;
+// 	inds.x = inds.x - DT * DISPERSAL_SIGMA / 2;
+// }
 
 reproduction() {
 	// density-dependent offspring production
-	neighbor_density = i1.totalOfNeighborStrengths(individual);
-	if (runif(1) < 1 - exp(-DT * neighbor_density / K)) {
-		mate = i1.drawByStrength(individual, 1);  // single mating
+	n = pmax(MIN_DENSITY, i1.localPopulationDensity(individual) / K);
+	if (runif(1) < 1 - exp(-DT * n)) {
+		mate = i1.drawByStrength(individual, 1);
 		if (size(mate) > 0) {
 			offspring = p1.addCrossed(individual, mate);
 		} else {
 			offspring = p1.addSelfed(individual);
 		}
-		pos = individual.spatialPosition + rnorm(2, c(0,0), DISPERSAL_SIGMA);
+		pos = individual.spatialPosition + rnorm(2, c(0,0), sqrt(DT) * DISPERSAL_SIGMA);
 		offspring.setSpatialPosition(p1.pointReflected(pos));
 	}
 }
@@ -77,37 +110,51 @@ reproduction() {
 early() { // survival probabilities
 	i1.evaluate();
 	inds = p1.individuals;
-	neighbor_density = i1.totalOfNeighborStrengths(inds);
-	inds.fitnessScaling = exp(-DT * (2 * neighbor_density / K - 1)) * asFloat(inds.x > 0);
+	n = pmax(MIN_DENSITY, i1.localPopulationDensity(inds) / K);
+	inds.fitnessScaling = exp(-DT * ((1 + 1/THETA) * n - 1/THETA)) * asFloat(inds.x > 0);
 }
 
 late() {
 	i1.evaluate();
-	inds = p1.individuals;
-	neighbor_density = i1.totalOfNeighborStrengths(inds);
-	//inds.color = colors(neighbor_density/max(neighbor_density), "jet");
+	if (DEBUG & p1.individualCount > 0) { // color individuals
+		inds = p1.individuals;
+		neighbor_density = i1.localPopulationDensity(inds);
+		inds.color = colors(neighbor_density/max(neighbor_density), "jet");
+	}
 }
 
 late() {
 	if (p1.individualCount == 0) {
-		stop("The population has died out, in generation " + sim.generation);
+		catn("The population has died out, in generation " + sim.generation);
+		sim.simulationFinished();
 	}
-	defineGlobal("TOTAL_SO_FAR", TOTAL_SO_FAR + p1.individualCount);
-	if (!exists("OUTPATH")) {
-		//catn("density: " + p1.individualCount / (WIDTH * HEIGHT) + " mean so far: " + TOTAL_SO_FAR / (WIDTH * HEIGHT * sim.generation));
-		catn(p1.individualCount / (WIDTH * HEIGHT) + "," + mean(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2)) + "," + var(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2)));
+	if (DEBUG) {
+		catn(p1.individualCount / (WIDTH * HEIGHT) + "," + mean(i1.localPopulationDensity(p1.individuals) + 1.0/(PI*EPSILON^2)) + "," + var(i1.localPopulationDensity(p1.individuals) + 1.0/(PI*EPSILON^2)));
 	}
 }
 
 late() {
-	sim.treeSeqRememberIndividuals(p1.individuals, permanent=T);
+	if (!DEBUG)
+		sim.treeSeqRememberIndividuals(p1.individuals, permanent=T);
 }
 
 s99 2000 late() {
-	if (exists("OUTPATH")) sim.treeSeqOutput(OUTPATH);
+	if (!DEBUG) sim.treeSeqOutput(OUTPATH, metadata=params);
 	sim.outputUsage();
-	//writeFile("interaction_strengths_sigma" + SIGMA + "dispersal" + DISPERSAL_SIGMA + ".txt", paste(i1.totalOfNeighborStrengths(p1.individuals) + 1.0/(PI*SIGMA^2), sep = "\n"), append = T);
-	catn("Done.");
+	catn("Done, written output to " + OUTPATH);
 	sim.simulationFinished();
 }
 
+// Output map of population
+s98 2000 late() {
+	if (!DEBUG) {
+		patches = summarizeIndividuals(
+			p1.individuals,
+			asInteger(1000 * pmin(1.0, c(HEIGHT/WIDTH, WIDTH/HEIGHT))),
+			p1.spatialBounds,
+			operation="length(individuals);"
+		);
+		patch_map = Image(patches / max(patches));
+		patch_map.write(IMAGEPATH + format("%05.0f", sim.generation * DT) + ".png");
+	}
+}
