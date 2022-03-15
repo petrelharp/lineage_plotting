@@ -42,7 +42,7 @@ In these four cases we have maximum neighborhood sizes of:
 library(jsonlite)
 
 defaults <- read_json("example_params.json")
-defaults$WIDTH <- 40
+defaults$WIDTH <- 70
 
 values <- expand.grid(
     THETA = c(1, 10, 100),
@@ -53,6 +53,8 @@ values <- expand.grid(
 
 values$EPSILON <- values$DISPERSAL_SIGMA * values$EPS_OVER_SIGMA
 values$K <- values$THETA ^ values$K_POWER
+
+stopifnot(all(6 * values$EPSILON < defaults$WIDTH))
 
 outdir <- "param_grid"
 dir.create(outdir, showWarnings=FALSE)
