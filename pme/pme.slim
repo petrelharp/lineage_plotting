@@ -54,7 +54,8 @@ initialize() {
 	catn("dispersal / interaction =  " + DISPERSAL_SIGMA / EPSILON + " (< 1 is patchy)");
 
 	// spatial interaction for local competition
-	initializeInteractionType("i1", "xy", reciprocal=T,
+	// NOTE: it is ONLY in the x direction!
+	initializeInteractionType("i1", "x", reciprocal=T,
 		maxDistance = 3 * EPSILON);
 	i1.setInteractionFunction("n", 1.0/(2*PI*EPSILON^2), EPSILON);
 }
