@@ -18,12 +18,14 @@ initialize() {
 		"MIN_DENSITY", 4/7, // threshold for density dependence on N/K
 		"DT", 0.1, // discretization factor for time
 		"EPSILON", 0.2,  // interaction distance
-		"DISPERSAL_SIGMA", 1.0,  // parent-offspring distance
+		"DISPERSAL_SIGMA", 1.0,  // parent-offspring distance,
+		"DIMENSION", 1, // whether to treat this as 1- or 2-dimensional
+		"HEIGHT", 5,   // height in real units
 		"WIDTH", 20,   // width in real units
-		"HEIGHT", 5,   // width in real units
+		"INIT_WIDTH", 10, // width of range where the initial population lives
 		"OUTDIR", exists("OUTDIR") ? OUTDIR else ".",
 		"RUNTIME", 1000, // amount of time to run for (so, RUNTIME/DT 'generations')
-		"DEBUG", T  // whether to compute expensive debugging things and not record tree sequences
+		"DEBUG", exists("slimgui")  // whether to compute expensive debugging things and not record tree sequences
 	);
 	paramfile = defaults.getValue("OUTDIR") + "/" + "params.json";
 	if (fileExists(paramfile)) {
@@ -55,11 +57,13 @@ initialize() {
 
 	// spatial interaction for local competition
 	// NOTE: it is ONLY in the x direction!
-	initializeInteractionType("i1", "x", reciprocal=T,
-		maxDistance = 3 * EPSILON);
-	i1.setInteractionFunction("n", 1.0/(2*PI*EPSILON^2), EPSILON);
+	initializeInteractionType("i1",
+		(DIMENSION == 1) ? "x" else "xy",
+		reciprocal=T,
+		maxDistance = 2 * EPSILON);
+	i1.setInteractionFunction("n", 1.0/sqrt(2*PI*EPSILON^2), EPSILON);
 }
-
+	
 
 // set up logging
 1 early() {
@@ -80,10 +84,10 @@ initialize() {
 }
 
 1 early() {
-	sim.addSubpop("p1", asInteger(K*WIDTH*HEIGHT*0.25));
+	sim.addSubpop("p1", asInteger(K * INIT_WIDTH * ((DIMENSION == 1) ? 1.0 else HEIGHT)));
 	p1.setSpatialBounds(c(0.0, 0.0, WIDTH, HEIGHT));
 	for (ind in p1.individuals) {
-		ind.setSpatialPosition(p1.pointUniform() * c(0.25, 1));
+		ind.setSpatialPosition(p1.pointUniform() * c(INIT_WIDTH/WIDTH, 1));
 	}
 }
 
@@ -117,10 +121,11 @@ early() { // survival probabilities
 
 late() {
 	i1.evaluate();
-	if (DEBUG & p1.individualCount > 0) { // color individuals
-		inds = p1.individuals;
-		neighbor_density = i1.localPopulationDensity(inds);
-		inds.color = colors(neighbor_density/max(neighbor_density), "jet");
+}
+
+early() {
+	if (DEBUG) {
+		catn("early\t" + p1.individualCount / (WIDTH * ((DIMENSION == 1) ? 1.0 else HEIGHT)) + "\t" + mean(i1.localPopulationDensity(p1.individuals)));
 	}
 }
 
@@ -130,7 +135,12 @@ late() {
 		sim.simulationFinished();
 	}
 	if (DEBUG) {
-		catn(p1.individualCount / (WIDTH * HEIGHT) + "," + mean(i1.localPopulationDensity(p1.individuals) + 1.0/(PI*EPSILON^2)) + "," + var(i1.localPopulationDensity(p1.individuals) + 1.0/(PI*EPSILON^2)));
+		catn("late\t" + p1.individualCount / (WIDTH * ((DIMENSION == 1) ? 1.0 else HEIGHT)) + "\t" + mean(i1.localPopulationDensity(p1.individuals)));
+	}
+	if (DEBUG & p1.individualCount > 0) { // color individuals
+		inds = p1.individuals;
+		neighbor_density = i1.localPopulationDensity(inds);
+		inds.color = colors(neighbor_density/max(neighbor_density), "jet");
 	}
 }
 

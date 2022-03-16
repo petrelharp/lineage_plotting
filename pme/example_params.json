@@ -8,7 +8,6 @@
 		"WIDTH" : 20,
 		"HEIGHT" : 5,
 		"RUNTIME" : 100,
-		"DEBUG" : false,
         "README" : {
             "THETA" : "inverse of difference in per-capita birth and death rates",
             "K" : "carrying capacity per unit area",
@@ -19,7 +18,6 @@
             "WIDTH" : "width in real units",
             "HEIGHT" : "width in real units",
             "OUTDIR" : "output directory (and read params from OUTDIR/params.json)",
-            "RUNTIME" : "whether to compute expensive debugging things and not record tree sequences",
-            "DEBUG" : "whether to compute expensive debugging things and not record tree sequences"
+            "RUNTIME" : "whether to compute expensive debugging things and not record tree sequences"
         }
 }
