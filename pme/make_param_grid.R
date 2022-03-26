@@ -43,6 +43,7 @@ library(jsonlite)
 
 defaults <- read_json("example_params.json")
 defaults$WIDTH <- 70
+defaults$DT <- 0.01
 
 values <- expand.grid(
     THETA = c(1, 10, 100),
