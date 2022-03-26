@@ -15,11 +15,16 @@ logs$dir <- factor(logs$dir, levels=simdirs)
 Kvals <- sort(unique(logs$K))
 Kcols <- rainbow(2*length(Kvals))
 
-plot(0, 0, xlab='generation', ylab='pop size', type='n', xlim=range(logs$generation), ylim=range(logs$num_individuals))
-for (d in levels(logs$dir)) {
-    with(subset(logs, dir == d), {
-            iK <- match(unique(K), Kvals)
-            lines(generation, num_individuals, type='l', col=Kcols[iK])
-    })
+pdf(file="trajectories.pdf", width=6, height=4, pointsize=10)
+layout(t(1:2))
+for (log in c('', 'x')) {
+    plot(0, 0, xlab='generation', ylab='pop size', type='n', xlim=range(logs$generation), ylim=range(logs$num_individuals), log=log)
+    for (d in levels(logs$dir)) {
+        with(subset(logs, dir == d), {
+                iK <- match(unique(K), Kvals)
+                lines(generation, num_individuals, type='l', col=Kcols[iK])
+        })
+    }
+    legend("topright", lty=1, col=Kcols, legend=sprintf("K = %0.0f", Kvals))
 }
-legend("topright", lty=1, col=Kcols, legend=sprintf("K = %0.0f", Kvals))
+dev.off()

@@ -49,7 +49,7 @@ initialize() {
 	}
 	catn("-------------\n");
 	defineGlobal("params", defaults);
-	
+
 	catn("theta / pop. density  = " + THETA / K + " (deterministic is -> 0)");
 	catn("(dispersal) neighborhood size = " + 4 * K * DISPERSAL_SIGMA + " (d=1) " + 4 * PI * K * DISPERSAL_SIGMA^2 + "(d=2)");
 	catn("interaction neighborhood = " + 4 * K * EPSILON + " (d=1) " + 4 * PI * K * EPSILON^2 + "(d=2)");
@@ -125,7 +125,14 @@ late() {
 
 early() {
 	if (DEBUG) {
-		catn("early\t" + p1.individualCount / (WIDTH * ((DIMENSION == 1) ? 1.0 else HEIGHT)) + "\t" + mean(i1.localPopulationDensity(p1.individuals)));
+		inds = p1.individuals;
+		n = pmax(MIN_DENSITY, i1.localPopulationDensity(inds) / K);
+		death = 1 - exp(-DT * ((1 + 1/THETA) * n - 1/THETA));
+		catn(sim.generation + "\tearly\t(" + p1.individualCount + " : "
+			  + round(mean(i1.localPopulationDensity(p1.individuals))) + ")"
+			  + "\tdeaths:\t" + mean(death)
+			 + " = " + (p1.individualCount * (1 - mean(death)))
+		);
 	}
 }
 
@@ -135,7 +142,14 @@ late() {
 		sim.simulationFinished();
 	}
 	if (DEBUG) {
-		catn("late\t" + p1.individualCount / (WIDTH * ((DIMENSION == 1) ? 1.0 else HEIGHT)) + "\t" + mean(i1.localPopulationDensity(p1.individuals)));
+		inds = p1.individuals;
+		n = pmax(MIN_DENSITY, i1.localPopulationDensity(inds) / K);
+		birth = 1 - exp(-DT * n);
+		catn(sim.generation + "\tlate\t(" + p1.individualCount + " : "
+			  + round(mean(i1.localPopulationDensity(p1.individuals))) + ")"
+			 + "\tbirths:\t" + mean(birth) 
+			 + " = " + (p1.individualCount * (1 + mean(birth)))
+		);
 	}
 	if (DEBUG & p1.individualCount > 0) { // color individuals
 		inds = p1.individuals;
