@@ -49,11 +49,21 @@ initialize() {
 	}
 	catn("-------------\n");
 	defineGlobal("params", defaults);
-
+	
+	// adjustment to death rate
+	defineConstant("DELTA",
+		1 + 2/THETA - (1/DT) * (
+        log(1 + DT * (2 * exp(-(1+1/THETA) * DT / K) - 1))
+        + 
+        (K - 1) * log(1 - DT * (1 - exp(-(1+1/THETA) * DT / K)))
+    	)
+   );
+   
 	catn("theta / pop. density  = " + THETA / K + " (deterministic is -> 0)");
 	catn("(dispersal) neighborhood size = " + 4 * K * DISPERSAL_SIGMA + " (d=1) " + 4 * PI * K * DISPERSAL_SIGMA^2 + "(d=2)");
 	catn("interaction neighborhood = " + 4 * K * EPSILON + " (d=1) " + 4 * PI * K * EPSILON^2 + "(d=2)");
 	catn("dispersal / interaction =  " + DISPERSAL_SIGMA / EPSILON + " (< 1 is patchy)");
+	catn("reducing death rates by delta = " + DELTA);
 
 	// spatial interaction for local competition
 	// NOTE: it is ONLY in the x direction!
@@ -116,7 +126,7 @@ early() { // survival probabilities
 	i1.evaluate();
 	inds = p1.individuals;
 	n = pmax(MIN_DENSITY, i1.localPopulationDensity(inds) / K);
-	inds.fitnessScaling = exp(-DT * ((1 + 1/THETA) * n - 1/THETA)) * asFloat(inds.x > 0);
+	inds.fitnessScaling = exp(-DT * ((1 + 1/THETA) * n - 1/THETA - DELTA)) * asFloat(inds.x > 0);
 }
 
 late() {
