@@ -59,6 +59,8 @@ def add_theory(ax, times, theory):
         ax.plot(x_mids, theory[:, m], c=cm(m / len(times)), ls="--")
     return
 
+#############
+
 plot_dt = 0.2
 plot_interval = 2
 t0 = [0, int(T/2) - plot_interval/2, T - plot_interval]
@@ -81,6 +83,26 @@ for t, ax in zip(t0, axes):
 
 fig.savefig(f"{outbase}.short_steps.png")
 
+
+#############
+
+output_times = np.arange(0, 6, 0.5)
+fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+plot_times(ax, output_times)
+theory = fe.pme(
+        ts,
+        output_times=output_times,
+        x_bins=x_bins,
+        sigma=params["DISPERSAL_SIGMA"],
+        fenics_nx=101,
+        fenics_ny=2,
+        fenics_dt=0.05
+)
+add_theory(ax, output_times, theory)
+
+fig.savefig(f"{outbase}.first_steps.png")
+
+#############
 
 output_times = np.arange(0, T, 10)
 fig, ax = plt.subplots(1, 1, figsize=(15, 5))
