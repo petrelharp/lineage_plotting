@@ -12,6 +12,7 @@ if len(sys.argv) != 2:
 
 
 treefile = sys.argv[1]
+assert treefile[-6:] == ".trees"
 outbase = treefile[:-6]
 
 ts = pyslim.load(treefile)

@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib
 
 from .spatial_slim_ts import *
+from .animate import *
 
 # pop_width = 8.0, 
 # numgens = 100, 

@@ -14,4 +14,5 @@ OUTDIR=$1
 slim -d "OUTDIR='${OUTDIR}'" -s 123 pme.slim &> $OUTDIR/slim.log
 
 
-python3 plot_density.py $OUTDIR/pme_123.trees
+# python3 plot_density.py $OUTDIR/pme_123.trees
+../animate_individuals.py $OUTDIR/pme_123.trees 
