@@ -43,7 +43,7 @@ library(jsonlite)
 
 defaults <- read_json("example_params.json")
 defaults$WIDTH <- 70
-defaults$DT <- 0.01
+defaults$DT <- 0.001
 
 values <- expand.grid(
     THETA = c(1, 10, 100),
@@ -57,8 +57,8 @@ values$K <- values$THETA ^ values$K_POWER
 
 stopifnot(all(6 * values$EPSILON < defaults$WIDTH))
 
-outdir <- "param_grid"
-dir.create(outdir, showWarnings=FALSE)
+outdir <- "param_grid/dt_0.001"
+dir.create(outdir, showWarnings=FALSE, recursive=TRUE)
 
 for (k in 1:nrow(values)) {
     subdir <- file.path(outdir, sprintf("sim_%04d", k))

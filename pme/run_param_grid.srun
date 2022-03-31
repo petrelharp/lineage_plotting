@@ -11,7 +11,8 @@
 
 slim -v
 
-DIRS=($(find param_grid -mindepth 1 -type 'd' -name 'sim*'))
+BASEDIR="param_grid/dt_0.001"
+DIRS=($(find $BASEDIR -mindepth 1 -type 'd' -name 'sim*'))
 DIR=${DIRS[$SLURM_ARRAY_TASK_ID]}
 
 echo "Doing:"
