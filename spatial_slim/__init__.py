@@ -5,11 +5,7 @@ import matplotlib
 
 from .spatial_slim_ts import *
 from .animate import *
-
-# pop_width = 8.0, 
-# numgens = 100, 
-# sigma = 1.0, 
-# K = 5.0,
+from .plot import *
 
 def run_slim(script, seed = 23, 
              **kwargs):

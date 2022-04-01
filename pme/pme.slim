@@ -71,12 +71,18 @@ initialize() {
 	catn("reducing death rates by delta = " + DELTA);
 
 	// spatial interaction for local competition
-	// NOTE: it is ONLY in the x direction!
+	// NOTE: it is ONLY in the x direction if DIMENSION is 1
 	initializeInteractionType("i1",
 		(DIMENSION == 1) ? "x" else "xy",
 		reciprocal=T,
 		maxDistance = 2 * EPSILON);
 	i1.setInteractionFunction("n", 1.0/sqrt(2*PI*EPSILON^2), EPSILON);
+    // for mate choice
+	initializeInteractionType("i2",
+		(DIMENSION == 1) ? "x" else "xy",
+		reciprocal=T,
+		maxDistance = 2 * DISPERSAL_SIGMA);
+	i2.setInteractionFunction("n", 1.0/sqrt(2*PI*DISPERSAL_SIGMA^2), DISPERSAL_SIGMA);
 }
 	
 
@@ -94,7 +100,7 @@ initialize() {
 }
 
 1 early() {
-	sim.rescheduleScriptBlock(s98, generations=unique(asInteger(seq(BURNIN / DT, (BURNIN + RUNTIME) / DT - 1, length=NUM_SNAPSHOTS))));
+	sim.rescheduleScriptBlock(s98, generations=unique(asInteger(seq(1 + BURNIN / DT, (BURNIN + RUNTIME) / DT - 1, length=NUM_SNAPSHOTS))));
 	sim.rescheduleScriptBlock(s99, generations=asInteger((BURNIN + RUNTIME) / DT)); // end
 }
 
@@ -116,11 +122,15 @@ initialize() {
 // 	inds.x = inds.x - DT * DISPERSAL_SIGMA / 2;
 // }
 
+first() {
+	i2.evaluate();
+}
+
 reproduction() {
 	// density-dependent offspring production
 	n = pmax(MIN_DENSITY, i1.localPopulationDensity(individual) / K);
 	if (runif(1) < 1 - exp(-DT * n)) {
-		mate = i1.drawByStrength(individual, 1);
+		mate = i2.drawByStrength(individual, 1);
 		if (size(mate) > 0) {
 			offspring = p1.addCrossed(individual, mate);
 		} else {

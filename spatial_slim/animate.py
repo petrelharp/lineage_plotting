@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import matplotlib.collections as cs
+import tskit
 
 def animate_individuals(fig, ts, times=None, ax=None, duration=20):
     """
@@ -51,4 +52,74 @@ def animate_individuals(fig, ts, times=None, ax=None, duration=20):
     animation = ani.FuncAnimation(fig, update, frames=times, interval=interval)
     return animation
 
+
+def animate_lineage(fig, ts, children, positions, time_ago_interval=None, ax=None, duration=20, dt=1.0):
+    """
+    An animation of the lineages ancestral to the given children
+    at the given positions along the genome.
+    Here `time_ago_interval` should be in units of SLiM time units *ago*.
+    """
+    if ax is None:
+        ax = fig.axes[0]
+    num_gens = ts.metadata["SLiM"]["generation"]
+    if time_ago_interval is None:
+        time_ago_interval = (0.0, num_gens - 1)
+
+    # don't need too many frames
+    times = np.arange(time_ago_interval[0], time_ago_interval[1])
+    while duration / len(times) < 0.1:
+        times = times[::2]
+
+    locs = ts.individual_locations
+    xmax = np.ceil(max(locs[:,0]))
+    ymax = np.ceil(max(locs[:,1]))
+    ax.set_xlim(0, xmax)
+    ax.set_ylim(0, ymax)
+    colormap = lambda x: plt.get_cmap("cool")(x/max(ts.individual_ages))
+    treecolors = [plt.get_cmap("viridis")(x) for x in np.linspace(0, 1, len(positions))]
+
+    inds = ts.individuals_alive_at(time_ago_interval[0])
+    circles = ax.scatter(locs[inds, 0], locs[inds, 1], s=10, 
+                         edgecolors=colormap([0 for _ in inds]),
+                         facecolors='none')
+    # will record here tuples of the form (time, x, y)
+    # and will later add the given lines at the corresponding times
+    nodes = ts.individual_nodes(children)
+    node_times = ts.tables.nodes.time
+    node_indivs = ts.tables.nodes.individual
+    paths = []
+    for p in positions:
+        tree = ts.at(p)
+        for u in nodes:
+            out = [np.concatenate([[node_times[u]], locs[node_indivs[u], :2]])]
+            u = tree.parent(u)
+            while u is not tskit.NULL:
+                uind = node_indivs[u]
+                if uind is tskit.NULL:
+                    break
+                out.append(np.concatenate([[node_times[u]], locs[uind, :2]]))
+                u = tree.parent(u)
+            paths.append(np.row_stack(out))
+    pathcolors = []
+    for c in treecolors:
+        pathcolors.extend([c] * len(positions))
+    lc = cs.LineCollection([], linewidths=0.5, colors=pathcolors)
+    ax.add_collection(lc)
+    ax.set_title(f"t = {(num_gens - time_ago_interval[0])*dt:.2f} (time {time_ago_interval[0]*dt:.2f} ago)")
+
+    def update(frame):
+        inds = ts.individuals_alive_at(frame)
+        circles.set_offsets(locs[inds,:2])
+        # color based on age so far
+        circles.set_color(colormap(ts.individual_ages_at(frame)[inds]))
+        show_paths = []
+        for path in paths:
+            dothese = (path[:, 0] <= frame)
+            show_paths.append(path[dothese, 1:])
+        lc.set_paths(show_paths)
+        ax.set_title(f"t = {(num_gens - frame)*dt:.2f} (time {frame*dt:.2f} ago)")
+        return circles, lc
+
+    animation = ani.FuncAnimation(fig, update, frames=times)
+    return animation
 

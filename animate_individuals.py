@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 usage = """
 Usage:
-    {} (treefile) [duration in seconds]
+    {} (treefile)
 """.format(sys.argv[0])
 
 if len(sys.argv) != 2:
