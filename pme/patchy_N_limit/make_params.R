@@ -13,7 +13,7 @@ defaults <- list(
      INIT_PROP = 1.0,
      BURNIN = 400,
      RUNTIME = 400,
-     NUM_SNAPSHOTS = 41,
+     NUM_SNAPSHOTS = 41
 )
 
 # We want to take theta to infinity,

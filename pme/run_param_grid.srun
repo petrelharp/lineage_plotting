@@ -11,8 +11,8 @@
 
 slim -v
 
-BASEDIR="param_grid/dt_0.001"
-DIRS=($(find $BASEDIR -mindepth 1 -type 'd' -name 'sim*'))
+BASEDIR="patchy_N_limit"
+DIRS=($(find $BASEDIR -mindepth 1 -type 'd' -name 'sim_*'))
 DIR=${DIRS[$SLURM_ARRAY_TASK_ID]}
 
 echo "Doing:"
@@ -21,5 +21,6 @@ echo "slim ../../pme.slim"
 
 cd $DIR
 slim ../../pme.slim &> slurm.log
-
+echo "done simulating! now animating."
+../../../animate_individuals.py $(ls -t *.trees | head -n 1)
  
