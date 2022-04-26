@@ -28,7 +28,7 @@ def _break_path(path, W):
         yield x
 
 
-def get_lineages(ts, children, positions, max_time, time_first=False):
+def get_lineages(ts, children, positions, max_time_ago):
     """
     A dictionary of the lineages ancestral to the given children
     at the given positions.
@@ -50,24 +50,23 @@ def get_lineages(ts, children, positions, max_time, time_first=False):
             while u is not tskit.NULL:
                 uind = node_indivs[u]
                 if (uind is tskit.NULL
-                        or ts.node(u).time > max_time
+                        or ts.node(u).time > max_time_ago
                         or not has_parents[uind]):
                     break
                 out.append(np.array([locs[uind, 0], node_times[u]]))
                 u = tree.parent(u)
             out = np.row_stack(out)
-            if time_first:
-                out = out[:,(1,0)]
             paths[(n, p)] = out
     return paths
 
 
-def lineage_paths(ax, ts, children, positions, max_time, periodic=False, width=None, time_first=True):
+def lineage_paths(ax, ts, children, positions, max_time_ago, periodic=False, width=None, time_on_x=True, dt=None):
     """
-    A plot of the lineages ancestral to the given children
-    at the given positions.
+    Returns a collection of lines tracing the lineages ancestral to the given
+    children at the given positions, up until max_time ago. Times are in *forwards* time, 
+    from max_time_ago (times dt, if present).
     """
-    path_dict = get_lineages(ts, children, positions, max_time, time_first=time_first)
+    path_dict = get_lineages(ts, children, positions, max_time_ago)
     locs = ts.individual_locations
     treecolors = {p : matplotlib.pyplot.get_cmap("viridis")(x)
                   for p, x in zip(positions, np.linspace(0, 1, len(positions)))}
@@ -77,15 +76,21 @@ def lineage_paths(ax, ts, children, positions, max_time, periodic=False, width=N
         birth_time = ts.node(u).time
         x0 = ts.individual(ts.node(u).individual).location[0]
         this_paths = [
-                [[0.0, x0],
-                 [birth_time, x0]
-                ]
+                np.array([
+                     [x0, 0.0],
+                     [x0, birth_time]
+                 ])
         ]
         if periodic:
             this_paths.extend(_break_path(path_dict[(u, p)], width))
         else:
             this_paths.extend([path_dict[(u, p)]])
         for this_path in this_paths:
+            this_path[:, 1] = max_time_ago - this_path[:, 1]
+            if dt is not None:
+                this_path[:, 1] *= dt
+            if time_on_x:
+                this_path = this_path[:, (1,0)]
             paths.append(this_path)
             pathcolors.append(treecolors[p])
     lc = matplotlib.collections.LineCollection(paths, linewidths=1.5, colors=pathcolors)

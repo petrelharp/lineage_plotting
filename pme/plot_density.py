@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os, sys
 import tskit, pyslim
 import json
@@ -7,8 +8,16 @@ from matplotlib import pyplot as plt
 
 import fe
 
+usage = """
+Plots the 1D density, along with a comparison to the fenics-computed numerical
+solution.
+
+Usage:
+    plot_density.py [name of treefile]
+"""
+
 if len(sys.argv) != 2:
-    raise ValueError("Usage:\n plot_density.py [name of treefile]")
+    raise ValueError(usage)
 
 
 treefile = sys.argv[1]

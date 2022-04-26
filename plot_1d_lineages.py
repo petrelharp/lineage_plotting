@@ -37,7 +37,10 @@ ts = pyslim.load(treefile)
 
 num_gens = ts.metadata['SLiM']['generation']
 params = ts.metadata['SLiM']['user_metadata']
-dt = params['DT'][0]
+try:
+    dt = params['DT'][0]
+except KeyError:
+    dt = 1.0
 width = params['WIDTH'][0]
 height = params['HEIGHT'][0]
 
@@ -50,33 +53,34 @@ popsize = pyslim.population_size(
 
 today = ts.individuals_alive_at(0)
 has_parents = ts.has_individual_parents()
-max_time = np.max(ts.individual_times[has_parents])
+max_time_ago = np.max(ts.individual_times[has_parents])
 if len(today) < num_indivs:
     raise ValueError(f"Not enough individuals: only {len(today)} alive today!")
 
 size = (12, 8)
 fig, ax = plt.subplots(figsize=size)
-ax.set_xlabel("time ago")
+ax.set_xlabel("(forwards) time")
 ax.set_ylabel("geographic position")
 
 ax.imshow(
-    popsize[:,:int(max_time)],
-    extent=(0, max_time, 0, width),
+    popsize[::-1,int(max_time_ago)::-1],
+    extent=(0, max_time_ago*dt, 0, width),
     interpolation='none',
-    aspect=(size[1] / size[0]) * (max_time / width),
+    aspect=(size[1] / size[0]) * ((max_time_ago*dt) / width),
     cmap="Oranges",
 )
 
 children = np.random.choice(today, num_indivs, replace=False)
 ax.scatter(
-        np.repeat(0.0, num_indivs),
+        np.repeat(max_time_ago*dt, num_indivs),
         [ts.individual(i).location[0] for i in children]
 )
 lc = sps.lineage_paths(ax, ts,
               children=children,
               positions=np.random.randint(0, ts.sequence_length - 1, num_positions),
-              max_time=max_time,
-              time_first=True,
+              max_time_ago=max_time_ago,
+              time_on_x=True,
+              dt=dt,
 )
 ax.add_collection(lc)
 
