@@ -1,6 +1,7 @@
 import numpy as np
 import tskit
 import matplotlib
+import scipy.stats
 
 def _break_path(path, W):
     """
@@ -95,3 +96,39 @@ def lineage_paths(ax, ts, children, positions, max_time_ago, periodic=False, wid
             pathcolors.append(treecolors[p])
     lc = matplotlib.collections.LineCollection(paths, linewidths=1.5, colors=pathcolors)
     return lc
+
+
+def plot_density(ts, time, ax, scatter=True, alpha=0.8, xlims=None, ylims=None):
+    """
+    Plot a 2D kernel density estimate of the population density
+    at the given time.
+    """
+
+    inds = ts.individuals_alive_at(time)
+    locs = np.array([ts.individual(i).location[:2] for i in inds])
+
+    if xlims is None:
+        xlims = (0.0, max(locs[:,0]))
+    if ylims is None:
+        ylims = (0.0, max(locs[:,1]))
+
+    kde = scipy.stats.gaussian_kde(locs.T)
+    X, Y = np.meshgrid(
+            np.linspace(xlims[0], xlims[1], 51),
+            np.linspace(ylims[0], ylims[1], 51))
+    Z = kde([X.flatten(), Y.flatten()])
+    Z.shape = X.shape
+    if scatter:
+        ax.scatter(locs[:, 0], locs[:, 1],
+                   s=10,
+                   alpha=0.5,
+                   c='black',
+                   marker="o",
+                   edgecolors='none')
+    ax.contour(X, Y, Z,
+               colors='c',
+               alpha=alpha,
+               zorder=-1)
+    return X, Y, Z
+
+

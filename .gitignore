@@ -1,3 +1,4 @@
 flat_map/
 __pycache__
 .*.swp
+.ipynb_checkpoints

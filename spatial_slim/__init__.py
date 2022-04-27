@@ -1,5 +1,4 @@
 import os, subprocess
-import scipy.stats
 import numpy as np
 import matplotlib
 
@@ -29,37 +28,3 @@ def run_slim(script, seed = 23,
         if not os.path.isfile(treefile):
             raise ValueError("SLiM failed to produce output file {}".format(treefile))
     return(treefile)
-
-# four_colors = ["#a6cee3", "#1f78b4", "#b2df8a", "#33a02c"]
-four_colors = ["#1b9e77", "#d95f02", "#7570b3", "#e7298a"]  # Dark2
-four_markers = ["v", "<", "^", ">"]
-
-
-def plot_density(ts, time, ax, scatter=True, alpha=0.8):
-    """
-    Plot a 2D kernel density estimate of the population density.
-    """
-
-    locs = ts.individual_locations[:,:2]
-    xmax = max(locs[:,0])
-    ymax = max(locs[:,1])
-    alive = ts.individuals_alive_at(time)
-    tlocs = locs.T
-    kde = scipy.stats.gaussian_kde(tlocs)
-    X, Y = np.meshgrid(
-            np.linspace(0.0, xmax, 51),
-            np.linspace(0.0, ymax, 51))
-    Z = kde([X.flatten(), Y.flatten()])
-    Z.shape = X.shape
-    if scatter:
-        ax.scatter(locs[alive, 0], locs[alive, 1],
-                   s=10,
-                   alpha=0.5,
-                   c='black',
-                   marker="o",
-                   edgecolors='none')
-    ax.contour(X, Y, Z,
-               colors='c',
-               alpha=alpha,
-               zorder=-1)
-
