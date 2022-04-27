@@ -47,4 +47,4 @@ ax.set_ylabel("northings")
 
 sps.plot_density(ts, 0.0, ax, xlims=(0.0, width), ylims=(0.0, height))
 
-fig.savefig(outbase + ".locations.pdf")
+fig.savefig(outbase + ".locations.pdf", bbox_inches='tight')

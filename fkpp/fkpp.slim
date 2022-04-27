@@ -19,6 +19,7 @@ initialize() {
 		"THETA", 10,  // inverse of difference in per-capita birth and death rates
 		"K", 100,	  // carrying capacity per unit area
 		"DT", 0.1, // discretization factor for time
+		"MAX_SURVIVAL", 0.95, // maximum survival probability
 		"EPSILON", 0.2,  // interaction distance
 		"DISPERSAL_SIGMA", 1.0,  // parent-offspring distance,
 		"DIMENSION", 1, // whether to treat this as 1- or 2-dimensional
@@ -132,7 +133,7 @@ reproduction() {
 	inds = p1.individuals;
 	new = asFloat(inds.age == 0);
 	n = inds.tagF;
-	inds.fitnessScaling = new + (1 - new) * exp(-DT * ((1 - 1/THETA) + n/THETA));
+	inds.fitnessScaling = new + (1 - new) * pmin(MAX_SURVIVAL, exp(-DT * ((1 - 1/THETA) + n/THETA)));
 }
 
 2: early() {
@@ -157,7 +158,7 @@ late() {
 }
 
 late() {
-	if (!DEBUG)
+	if ((sim.generation >= BURNIN / DT) & !DEBUG)
 		sim.treeSeqRememberIndividuals(p1.individuals, permanent=T);
 }
 
