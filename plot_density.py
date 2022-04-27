@@ -13,14 +13,18 @@ usage = """
 Makes a plot of the current location of individuals.
 
 Usage:
-    {} (script name)
+    {} (treefile) [max dimension=8]
 """.format(sys.argv[0])
 
-if len(sys.argv) != 2:
+if len(sys.argv) < 2 or len(sys.argv) > 3:
     raise ValueError(usage)
 
 treefile = sys.argv[1]
 outbase = ".".join(treefile.split(".")[:-1])
+
+max_dimension = 8
+if len(sys.argv) > 2:
+    max_dimension = float(sys.argv[2])
 
 ts = pyslim.load(treefile)
 
@@ -32,7 +36,7 @@ except KeyError:
     dt = 1.0
 width = params['WIDTH'][0]
 height = params['HEIGHT'][0]
-size = (8 * max(1.0, width/height), 8 * max(1.0, height/width))
+size = (max_dimension * max(1.0, width/height), max_dimension * max(1.0, height/width))
 
 today = ts.individuals_alive_at(0)
 locs = np.array([ts.individual(i).location[:2] for i in today])
