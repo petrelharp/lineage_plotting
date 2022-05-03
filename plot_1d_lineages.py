@@ -14,19 +14,26 @@ Makes a plot of *lineages* moving back
 at a randomly chosen set of positions on the genome
 from the chromosomes of the given number of diploid individuals.
 Usage:
-    {} (treefile) [num indivs=3] [num positions = 1]
+    {} (treefile) [num indivs=3] [num positions = 1] [width = 12] [height = 8]
 where the KEY=VALUE pairs get passed to SLiM.
 """.format(sys.argv[0])
 
 num_indivs = 3
 num_positions = 1
+figwidth = 12
+figheight = 8
 if len(sys.argv) < 2:
     raise ValueError(usage)
-elif len(sys.argv) >= 3:
+
+if len(sys.argv) >= 3:
     num_indivs = int(sys.argv[2])
-elif len(sys.argv) >= 4:
+if len(sys.argv) >= 4:
     num_positions = int(sys.argv[3])
-elif len(sys.argv) > 4:
+if len(sys.argv) >= 5:
+    figwidth = int(sys.argv[4])
+if len(sys.argv) >= 6:
+    figheight = int(sys.argv[5])
+if len(sys.argv) > 6:
     raise ValueError(usage)
 
 
@@ -57,7 +64,7 @@ max_time_ago = np.max(ts.individual_times[has_parents])
 if len(today) < num_indivs:
     raise ValueError(f"Not enough individuals: only {len(today)} alive today!")
 
-size = (12, 8)
+size = (figwidth, figheight)
 fig, ax = plt.subplots(figsize=size)
 ax.set_xlabel("(forwards) time")
 ax.set_ylabel("geographic position")
@@ -84,5 +91,5 @@ lc = sps.lineage_paths(ax, ts,
 )
 ax.add_collection(lc)
 
-fig.savefig(outbase + ".lineages.png")
+fig.savefig(outbase + ".lineages.pdf")
 plt.close(fig)
