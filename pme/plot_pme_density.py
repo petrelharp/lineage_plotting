@@ -19,7 +19,7 @@ Usage:
 if len(sys.argv) != 2 and len(sys.argv) != 5:
     raise ValueError(usage)
 
-output_time = "pdf"
+output_type = "pdf"
 
 treefile = sys.argv[1]
 assert treefile[-6:] == ".trees"

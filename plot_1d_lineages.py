@@ -91,5 +91,5 @@ lc = sps.lineage_paths(ax, ts,
 )
 ax.add_collection(lc)
 
-fig.savefig(outbase + ".lineages.pdf")
+fig.savefig(outbase + ".lineages.pdf", bbox_inches="tight")
 plt.close(fig)
