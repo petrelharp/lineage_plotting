@@ -140,7 +140,7 @@ reproduction() {
 	// shift into frame of reference of wave front
 	if (SHIFT != 0) {
 		inds = p1.individuals;
-		inds.x = inds.x - SHIFT;
+		inds.x = inds.x - SHIFT * DT;
 		inds.fitnessScaling = inds.fitnessScaling * asFloat(inds.x > 0);
 	}
 }

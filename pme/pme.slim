@@ -66,8 +66,8 @@ initialize() {
    );
    
 	catn("theta / pop. density  = " + THETA / K + " (deterministic is -> 0)");
-	catn("(dispersal) neighborhood size = " + 4 * K * DISPERSAL_SIGMA + " (d=1) " + 4 * PI * K * DISPERSAL_SIGMA^2 + "(d=2)");
-	catn("interaction neighborhood = " + 4 * K * EPSILON + " (d=1) " + 4 * PI * K * EPSILON^2 + "(d=2)");
+	catn("(dispersal) neighborhood size = " + 4 * K * DISPERSAL_SIGMA + " (d=1) " + 4 * PI * K * DISPERSAL_SIGMA^2 + " (d=2)");
+	catn("interaction neighborhood = " + 4 * K * EPSILON + " (d=1) " + 4 * PI * K * EPSILON^2 + " (d=2)");
 	catn("dispersal / interaction =  " + DISPERSAL_SIGMA / EPSILON + " (< 1 is patchy)");
 	catn("reducing death rates by delta = " + DELTA);
 
@@ -88,7 +88,7 @@ initialize() {
 	
 
 // set up logging
-1 early() {
+1 first() {
 	if (!DEBUG) {
 		log = sim.createLogFile(OUTPATH + ".log");
 		log.setLogInterval(20);
@@ -100,12 +100,12 @@ initialize() {
 	}
 }
 
-1 early() {
+1 first() {
 	sim.rescheduleScriptBlock(s98, generations=unique(asInteger(seq(1 + BURNIN / DT, (BURNIN + RUNTIME) / DT - 1, length=NUM_SNAPSHOTS))));
 	sim.rescheduleScriptBlock(s99, generations=asInteger((BURNIN + RUNTIME) / DT)); // end
 }
 
-1 early() {
+1 late() {
 	if (exists("RESTART_FILE")) {
 		sim.readFromPopulationFile(RESTART_FILE);
 	} else {
@@ -117,14 +117,16 @@ initialize() {
 	}
 }
 
-first() {
+late() {
+	i1.evaluate();
 	i2.evaluate();
+	inds = p1.individuals;
+	inds.tagF = i1.localPopulationDensity(inds) / K;
 }
 
 reproduction() {
 	// density-dependent offspring production
-	n = pmax(MIN_DENSITY, i1.localPopulationDensity(individual) / K);
-	if (runif(1) < 1 - exp(-DT * n)) {
+	if (runif(1) < 1 - exp(-DT * max(MIN_DENSITY, individual.tagF))) {
 		mate = i2.drawByStrength(individual, 1);
 		if (size(mate) > 0) {
 			offspring = p1.addCrossed(individual, mate);
@@ -133,40 +135,22 @@ reproduction() {
 		}
 		pos = individual.spatialPosition + rnorm(2, c(0,0), sqrt(DT) * DISPERSAL_SIGMA);
 		offspring.setSpatialPosition(p1.pointReflected(pos));
+		offspring.tagF = -1.0;
 	}
 }
 
-early() { // survival probabilities
-	i1.evaluate();
+2: early() { // survival probabilities
 	inds = p1.individuals;
-	n = pmax(MIN_DENSITY, i1.localPopulationDensity(inds) / K);
-	inds.fitnessScaling = exp(-DT * ((1 + 1/THETA) * n - 1/THETA - DELTA)) * asFloat(inds.x > 0);
+	new = asFloat(inds.age == 0);
+	n = pmax(MIN_DENSITY, inds.tagF);
+	inds.fitnessScaling = new + (1 - new) * exp(-DT * ((1 + 1/THETA) * n - 1/THETA));
 }
 
-late() {
-	i1.evaluate();
-}
-
-early() {
-	if (DEBUG) {
-		inds = p1.individuals;
-		n = pmax(MIN_DENSITY, i1.localPopulationDensity(inds) / K);
-		death = 1 - exp(-DT * ((1 + 1/THETA) * n - 1/THETA));
-		catn(sim.generation + "\tearly\t(" + p1.individualCount + " : "
-			  + round(mean(i1.localPopulationDensity(p1.individuals))) + ")"
-			  + "\tdeaths:\t" + mean(death)
-			 + " = " + (p1.individualCount * (1 - mean(death)))
-		);
-	}
-}
-
-
-early() {
+2: early() {
 	// shift into frame of reference of wave front
-	// (must do this *after* interactions have been used
 	if (SHIFT != 0) {
 		inds = p1.individuals;
-		inds.x = inds.x - SHIFT;
+		inds.x = inds.x - SHIFT * DT;
 		inds.fitnessScaling = inds.fitnessScaling * asFloat(inds.x > 0);
 	}
 }
@@ -176,16 +160,6 @@ late() {
 		catn("The population has died out, in generation " + sim.generation);
 		sim.simulationFinished();
 	}
-	if (DEBUG & p1.individualCount > 0) {
-		inds = p1.individuals;
-		n = pmax(MIN_DENSITY, i1.localPopulationDensity(inds) / K);
-		birth = 1 - exp(-DT * n);
-		catn(sim.generation + "\tlate\t(" + p1.individualCount + " : "
-			  + round(mean(i1.localPopulationDensity(p1.individuals))) + ")"
-			 + "\tbirths:\t" + mean(birth) 
-			 + " = " + (p1.individualCount * (1 + mean(birth)))
-		);
-	}
 	if (DEBUG & p1.individualCount > 0) { // color individuals
 		inds = p1.individuals;
 		neighbor_density = i1.localPopulationDensity(inds);
@@ -194,7 +168,7 @@ late() {
 }
 
 late() {
-	if (!DEBUG)
+	if ((sim.generation >= BURNIN / DT) & !DEBUG)
 		sim.treeSeqRememberIndividuals(p1.individuals, permanent=T);
 }
 
