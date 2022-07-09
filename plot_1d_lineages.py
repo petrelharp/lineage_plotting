@@ -93,3 +93,24 @@ ax.add_collection(lc)
 
 fig.savefig(outbase + ".lineages.pdf", bbox_inches="tight")
 plt.close(fig)
+
+path_dict = sps.get_lineages(
+              ts,
+              children=children,
+              positions=np.random.randint(0, ts.sequence_length - 1, num_positions),
+              max_time_ago=max_time_ago
+)
+
+size = (figwidth/2, figheight)
+fig, ax = plt.subplots(figsize=size)
+llocs = np.concatenate([
+    path_dict[k][path_dict[k][:,1] > max_time_ago / 2, 0]
+    for k in path_dict
+])
+raise ValueError("Need to correctly account for lifetimes.")
+ax.hist(
+        llocs,
+        orientation='horizontal',
+        bins=30
+)
+fig.savefig(outbase + ".lineagehist.pdf", bbox_inches="tight")

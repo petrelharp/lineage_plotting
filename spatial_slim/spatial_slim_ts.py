@@ -260,6 +260,10 @@ class SpatialSlimTreeSequence(pyslim.SlimTreeSequence):
         sets inheriting from that node. In other words, if the output is A,
         then A[i,j] is the proportion of sample_sets[i]'s ancestry contributed
         by node j.
+
+        NOTE: instead, use e.g.,
+        ts.sample_count_stat([[0], [1]], lambda x: x, 2, polarised=True, strict=False, mode='node')
+        to do this!
         """
         for sample_set in sample_sets:
             U = set(sample_set)
