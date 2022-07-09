@@ -8,7 +8,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 import tskit
-import spatial_slim as sps
 
 usage = """
 Makes plots of the locations of ancestors of the most north- and southward
@@ -24,7 +23,7 @@ if len(sys.argv) < 1 or len(sys.argv) > 2:
 treefile = sys.argv[1]
 outbase = ".".join(treefile.split(".")[:-1])
 
-ts = pyslim.load(treefile)
+ts = tskit.load(treefile)
 params = ts.metadata['SLiM']['user_metadata']
 
 indiv_times = ts.individual_times
@@ -66,7 +65,7 @@ ylim = (min(indiv_locs[:,1]), max(indiv_locs[:,1]))
 tts = list(set(indiv_times))
 
 for k, ind in enumerate(target_indivs):
-    fig, axs = plt.subplots(int(np.ceil(len(tts)/3)), 3, figsize=(6, 6 * ymax / xmax))
+    fig, axs = plt.subplots(int(np.ceil(len(tts)/3)), 3, figsize=(6, 6 * (ylim[1] - ylim[0]) / (xlim[1] - xlim[0])))
     j = 0
     for axlist in axs:
         for ax in axlist:
