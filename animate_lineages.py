@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import pyslim, tskit
+import tskit
 import numpy as np
 import spatial_slim as sps
 
@@ -32,7 +32,7 @@ elif len(sys.argv) > 4:
 treefile = sys.argv[1]
 outbase = ".".join(treefile.split(".")[:-1])
 
-ts = sps.SpatialSlimTreeSequence(pyslim.load(treefile), dim=2)
+ts = sps.SpatialSlimTreeSequence(tskit.load(treefile), dim=2)
 
 params = ts.metadata['SLiM']['user_metadata']
 dt = params['DT'][0]

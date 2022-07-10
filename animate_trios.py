@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import pyslim, tskit
+import tskit
 import numpy as np
 import spatial_slim as sps
 
@@ -76,7 +76,7 @@ def animate_individuals(ts, num_gens):
 treefile = sps.run_slim(script = script, **kwargs)
 outbase = ".".join(treefile.split(".")[:-1])
 
-ts = sps.SpatialSlimTreeSequence(pyslim.load(treefile), dim=2)
+ts = sps.SpatialSlimTreeSequence(tskit.load(treefile), dim=2)
 
 animation = animate_individuals(ts, num_gens)
 animation.save(outbase + ".trios.mp4", writer='ffmpeg')

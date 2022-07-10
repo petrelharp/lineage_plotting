@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import pyslim, tskit
+import tskit
 import numpy as np
 import spatial_slim as sps
 
@@ -83,7 +83,7 @@ def animate_tree(ts, children, num_gens):
 treefile = sps.run_slim(script = script, **kwargs)
 outbase = ".".join(treefile.split(".")[:-1])
 
-ts = sps.SpatialSlimTreeSequence(pyslim.load(treefile), dim=2)
+ts = sps.SpatialSlimTreeSequence(tskit.load(treefile), dim=2)
 
 today = np.where(ts.individual_times == 0)[0]
 animation = animate_tree(ts, np.random.choice(today, num_trees), num_gens)

@@ -1,5 +1,5 @@
 import numpy as np
-import tskit
+import tskit, pyslim
 import matplotlib
 import scipy.stats
 
@@ -104,7 +104,7 @@ def plot_density(ts, time, ax, scatter=True, alpha=0.8, xlims=None, ylims=None):
     at the given time.
     """
 
-    inds = ts.individuals_alive_at(time)
+    inds = pyslim.individuals_alive_at(ts, time)
     locs = np.array([ts.individual(i).location[:2] for i in inds])
 
     if xlims is None:

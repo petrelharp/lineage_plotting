@@ -3,7 +3,7 @@ import numpy as np
 import tqdm
 import scipy.sparse as sparse
 
-class SpatialSlimTreeSequence(pyslim.SlimTreeSequence):
+class SpatialSlimTreeSequence(tskit.TreeSequence):
 
     def __init__(self, ts, dim=3):
         super(SpatialSlimTreeSequence, self).__init__(ts)

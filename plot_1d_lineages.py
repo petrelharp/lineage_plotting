@@ -40,7 +40,7 @@ if len(sys.argv) > 6:
 treefile = sys.argv[1]
 outbase = ".".join(treefile.split(".")[:-1])
 
-ts = pyslim.load(treefile)
+ts = tskit.load(treefile)
 
 num_gens = ts.metadata['SLiM']['generation']
 params = ts.metadata['SLiM']['user_metadata']

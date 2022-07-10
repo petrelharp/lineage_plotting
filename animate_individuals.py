@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import pyslim, tskit
+import tskit
 import numpy as np
 import spatial_slim as sps
 
@@ -20,7 +20,7 @@ if len(sys.argv) != 2:
 treefile = sys.argv[1]
 outbase = ".".join(treefile.split(".")[:-1])
 
-ts = pyslim.load(treefile)
+ts = tskit.load(treefile)
 
 params = ts.metadata['SLiM']['user_metadata']
 width = params['WIDTH'][0]
