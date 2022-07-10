@@ -63,6 +63,7 @@ for n in ts.nodes():
 xlim = (min(indiv_locs[:,0]), max(indiv_locs[:,0]))
 ylim = (min(indiv_locs[:,1]), max(indiv_locs[:,1]))
 tts = list(set(indiv_times))
+tts.sort()
 
 for k, ind in enumerate(target_indivs):
     fig, axs = plt.subplots(int(np.ceil(len(tts)/3)), 3, figsize=(6, 6 * (ylim[1] - ylim[0]) / (xlim[1] - xlim[0])))
