@@ -17,7 +17,7 @@ Usage:
     {} (treefile)
 """.format(sys.argv[0])
 
-if len(sys.argv) < 1 or len(sys.argv) > 2:
+if len(sys.argv) < 2 or len(sys.argv) > 3:
     raise ValueError(usage)
 
 treefile = sys.argv[1]
