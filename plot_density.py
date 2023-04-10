@@ -14,10 +14,10 @@ Makes a plot of the location of individuals present in the tree sequence
 at the provided time ago (defaults to zero).
 
 Usage:
-    {} (treefile) [time ago=0] [format=png] [max dimension=8]
+    {} (treefile) [time ago=0] [format=png] [max dimension=8] [alpha for contours] [title]
 """.format(sys.argv[0])
 
-if len(sys.argv) < 2 or len(sys.argv) > 5:
+if len(sys.argv) < 2 or len(sys.argv) > 6:
     raise ValueError(usage)
 
 treefile = sys.argv[1]
@@ -26,12 +26,15 @@ outbase = ".".join(treefile.split(".")[:-1])
 time_ago = 0
 format = "png"
 max_dimension = 8
+alpha = 0.8
 if len(sys.argv) > 2:
     time_ago = float(sys.argv[2])
 if len(sys.argv) > 3:
     format = sys.argv[3]
 if len(sys.argv) > 4:
     max_dimension = float(sys.argv[4])
+if len(sys.argv) > 5:
+    alpha = float(sys.argv[5])
 
 ts = tskit.load(treefile)
 
@@ -64,7 +67,7 @@ ax.set_xlabel("eastings")
 ax.set_ylabel("northings")
 ax.set_title(f"density at {time_ago} ago")
 
-sps.plot_density(ts, time_ago, ax, xlims=xlim, ylims=ylim)
+sps.plot_density(ts, time_ago, ax, xlims=xlim, ylims=ylim, alpha=alpha)
 
 plt.tight_layout()
 fig.savefig(outbase + f".density.{time_ago}.{format}", bbox_inches='tight')
