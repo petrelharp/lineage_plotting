@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import matplotlib.collections as cs
-import tskit
+import pyslim, tskit
 
 def animate_individuals(fig, ts, times=None, ax=None, duration=20):
     """
@@ -22,15 +22,15 @@ def animate_individuals(fig, ts, times=None, ax=None, duration=20):
     while duration / len(times) < 0.1:
         times = times[::2]
 
-    locs = ts.individual_locations
+    locs = ts.individuals_location.reshape((ts.num_individuals,3))
     xmax = np.ceil(max(locs[:,0]))
     ymax = np.ceil(max(locs[:,1]))
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, ymax)
-    colormap = lambda x: plt.get_cmap("cool")(x/max(ts.individual_ages))
+    colormap = lambda x: plt.get_cmap("cool")(x/max(pyslim.individual_ages(ts)))
     frame = np.max(times)
-    inds = ts.individuals_alive_at(frame)
-    next_inds = ts.individuals_alive_at(frame - 1)
+    inds = pyslim.individuals_alive_at(ts, frame)
+    next_inds = pyslim.individuals_alive_at(ts, frame - 1)
     circles = ax.scatter(locs[inds, 0], locs[inds, 1], s=10, 
                          edgecolors=colormap([0 for _ in inds]),
                          facecolors='none')
@@ -39,12 +39,12 @@ def animate_individuals(fig, ts, times=None, ax=None, duration=20):
                         edgecolors='none')
 
     def update(frame):
-        inds = ts.individuals_alive_at(frame)
-        next_inds = ts.individuals_alive_at(frame - 1)
+        inds = pyslim.individuals_alive_at(ts, frame)
+        next_inds = pyslim.individuals_alive_at(ts, frame - 1)
         circles.set_offsets(locs[inds,:2])
         filled.set_offsets(locs[next_inds,:2])
         # color based on age so far
-        circles.set_color(colormap(ts.individual_ages_at(frame)[inds]))
+        circles.set_color(colormap(pyslim.individual_ages_at(ts, frame)[inds]))
         return circles, filled
 
     # interval is an integer number of milliseconds
@@ -70,15 +70,15 @@ def animate_lineage(fig, ts, children, positions, time_ago_interval=None, ax=Non
     while duration / len(times) < 0.1:
         times = times[::2]
 
-    locs = ts.individual_locations
+    locs = ts.individuals_location.reshape((ts.num_individuals, 3))
     xmax = np.ceil(max(locs[:,0]))
     ymax = np.ceil(max(locs[:,1]))
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, ymax)
-    colormap = lambda x: plt.get_cmap("cool")(x/max(ts.individual_ages))
+    colormap = lambda x: plt.get_cmap("cool")(x/max(pyslim.individual_ages(ts)))
     treecolors = [plt.get_cmap("viridis")(x) for x in np.linspace(0, 1, len(positions))]
 
-    inds = ts.individuals_alive_at(time_ago_interval[0])
+    inds = pyslim.individuals_alive_at(ts, time_ago_interval[0])
     circles = ax.scatter(locs[inds, 0], locs[inds, 1], s=10, 
                          edgecolors=colormap([0 for _ in inds]),
                          facecolors='none')
@@ -108,10 +108,10 @@ def animate_lineage(fig, ts, children, positions, time_ago_interval=None, ax=Non
     ax.set_title(f"t = {(num_gens - time_ago_interval[0])*dt:.2f} (time {time_ago_interval[0]*dt:.2f} ago)")
 
     def update(frame):
-        inds = ts.individuals_alive_at(frame)
+        inds = pyslim.individuals_alive_at(frame)
         circles.set_offsets(locs[inds,:2])
         # color based on age so far
-        circles.set_color(colormap(ts.individual_ages_at(frame)[inds]))
+        circles.set_color(colormap(pyslim.individual_ages_at(ts, frame)[inds]))
         show_paths = []
         for path in paths:
             dothese = (path[:, 0] <= frame)

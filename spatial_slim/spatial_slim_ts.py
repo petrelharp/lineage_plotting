@@ -22,7 +22,7 @@ class SpatialSlimTreeSequence(tskit.TreeSequence):
             raise ValueError("point not of the correct shape: must be coercible to"
                              + "a vector of length self.dim or less.")
 
-        return np.sqrt(np.sum((self.individual_locations - point) ** 2, axis=1))
+        return np.sqrt(np.sum((self.individual_locations.reshape((self.num_individuals,3)) - point) ** 2, axis=1))
 
     def individuals_in_circle(self, center, radius, time=None):
         """
@@ -32,7 +32,7 @@ class SpatialSlimTreeSequence(tskit.TreeSequence):
         :param float radius: The radius of the circle.
         """
         dists = self.individual_distance_to_point(center)
-        alive = self.individuals_alive_at(time)
+        alive = pyslim.individuals_alive_at(self, time)
         return alive[dists <= radius]
 
     def node_children_dict(self, left=0.0, right=None):
@@ -194,14 +194,14 @@ class SpatialSlimTreeSequence(tskit.TreeSequence):
             raise ValueError("Individual child index out of bounds.")
         child_nodes = self.individual_nodes(children, flatten=True)
         node_parents = self.node_parents(child_nodes, left=left, right=right)
-        indiv_parents = np.column_stack((self.tables.nodes.individual[node_parents[:, 0]],
-                                         self.tables.nodes.individual[node_parents[:, 1]]))
+        indiv_parents = np.column_stack((self.nodes_individual[node_parents[:, 0]],
+                                         self.nodes_individual[node_parents[:, 1]]))
         yesthese = np.logical_and(indiv_parents[:,0] != tskit.NULL,
                                   indiv_parents[:,1] != tskit.NULL)
         if time is not None:
              yesthese = np.logical_and(yesthese,
                                        np.isin(indiv_parents[:,1],
-                                               self.individuals_alive_at(time)))
+                                               pyslim.individuals_alive_at(self, time)))
         return indiv_parents[yesthese, :]
 
     def individual_nodes(self, individuals, flatten=True):

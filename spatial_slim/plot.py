@@ -35,13 +35,13 @@ def get_lineages(ts, children, positions, max_time_ago):
     at the given positions.
     Keys are (node id, position on the genome).
     """
-    locs = ts.individual_locations
+    locs = ts.individuals_location.reshape((ts.num_individuals, 3))
     # will record here tuples of the form (time, x)
     nodes = np.concatenate([ts.individual(i).nodes for i in children])
     node_times = ts.tables.nodes.time
     # careful: some are tskit.NULL
-    node_indivs = ts.tables.nodes.individual
-    has_parents = ts.has_individual_parents()
+    node_indivs = ts.nodes_individual
+    has_parents = pyslim.has_individual_parents(ts)
     paths = {}
     for p in positions:
         tree = ts.at(p)
@@ -68,7 +68,7 @@ def lineage_paths(ax, ts, children, positions, max_time_ago, periodic=False, wid
     from max_time_ago (times dt, if present).
     """
     path_dict = get_lineages(ts, children, positions, max_time_ago)
-    locs = ts.individual_locations
+    locs = ts.individual_locations.reshape((ts.num_individuals, 3))
     treecolors = {p : matplotlib.pyplot.get_cmap("viridis")(x)
                   for p, x in zip(positions, np.linspace(0, 1, len(positions)))}
     paths = []

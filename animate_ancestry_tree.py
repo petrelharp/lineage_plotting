@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import tskit
+import pyslim, tskit
 import numpy as np
 import spatial_slim as sps
 
@@ -45,15 +45,15 @@ def animate_tree(ts, children, num_gens):
     """
     fig = plt.figure(figsize=(9,9))
     ax = fig.add_subplot(111)
-    locs = ts.individual_locations
+    locs = ts.individuals_location.reshape((ts.num_individuals,3))
     xmax = np.ceil(max(locs[:,0]))
     ymax = np.ceil(max(locs[:,1]))
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, ymax)
     # colors
-    colormap = lambda x: plt.get_cmap("cool")(x/max(ts.individual_ages))
+    colormap = lambda x: plt.get_cmap("cool")(x/max(pyslim.individual_ages(ts)))
     # treecolors = [plt.get_cmap("viridis")(x) for x in np.linspace(0, 1, len(children))]
-    inds = ts.individuals_alive_at(0)
+    inds = pyslim.individuals_alive_at(ts, 0)
     circles = ax.scatter(locs[inds, 0], locs[inds, 1], s=10, 
                          edgecolors=colormap([0 for _ in inds]),
                          facecolors='none')
@@ -64,12 +64,12 @@ def animate_tree(ts, children, num_gens):
     def update(frame):
         nonlocal children
         nonlocal paths
-        inds = ts.individuals_alive_at(frame)
+        inds = pyslim.individuals_alive_at(ts, frame)
         circles.set_offsets(locs[inds,:2])
         # color based on age so far
-        circles.set_color(colormap(ts.individual_ages_at(frame)[inds]))
-        newborns = children[ts.individual_ages_at(frame)[children] == 0]
-        pcs = ts.individual_parents(newborns)
+        circles.set_color(colormap(pyslim.individual_ages_at(ts, frame)[inds]))
+        newborns = children[pyslim.individual_ages_at(ts, frame)[children] == 0]
+        pcs = pyslim.individual_parents(ts, newborns)
         if len(pcs) > 0:
             children = np.concatenate((children, pcs[:,0]))
             paths = paths + [locs[pc,:2] for pc in pcs]
@@ -85,7 +85,7 @@ outbase = ".".join(treefile.split(".")[:-1])
 
 ts = sps.SpatialSlimTreeSequence(tskit.load(treefile), dim=2)
 
-today = np.where(ts.individual_times == 0)[0]
+today = np.where(ts.individuals_time == 0)[0]
 animation = animate_tree(ts, np.random.choice(today, num_trees), num_gens)
 animation.save(outbase + ".trees.mp4", writer='ffmpeg')
 

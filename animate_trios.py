@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import tskit
+import pyslim, tskit
 import numpy as np
 import spatial_slim as sps
 
@@ -37,15 +37,15 @@ def animate_individuals(ts, num_gens):
     # an animation of the individuals
     fig = plt.figure(figsize=(9,9))
     ax = fig.add_subplot(111)
-    locs = ts.individual_locations
+    locs = ts.individuals_location.reshape((ts.num_individuals,3))
     xmax = np.ceil(max(locs[:,0]))
     ymax = np.ceil(max(locs[:,1]))
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, ymax)
     # colors
-    colormap = lambda x: plt.get_cmap("cool")(x/max(ts.individual_ages))
-    inds = ts.individuals_alive_at(num_gens)
-    next_inds = ts.individuals_alive_at(num_gens - 1)
+    colormap = lambda x: plt.get_cmap("cool")(x/max(pyslim.individual_ages(ts)))
+    inds = pyslim.individuals_alive_at(ts, num_gens)
+    next_inds = pyslim.individuals_alive_at(ts, num_gens - 1)
     circles = ax.scatter(locs[inds, 0], locs[inds, 1], s=10, 
                          edgecolors=colormap([0 for _ in inds]),
                          facecolors='none')
@@ -56,16 +56,16 @@ def animate_individuals(ts, num_gens):
     ax.add_collection(lc)
 
     def update(frame):
-        inds = ts.individuals_alive_at(frame)
-        next_inds = ts.individuals_alive_at(frame - 1)
+        inds = pyslim.individuals_alive_at(ts, frame)
+        next_inds = pyslim.individuals_alive_at(ts, frame - 1)
         circles.set_offsets(locs[inds,:2])
         filled.set_offsets(locs[next_inds,:2])
         # color based on age so far
-        circles.set_color(colormap(ts.individual_ages_at(frame)[inds]))
-        filled.set_color(colormap(ts.individual_ages_at(frame)[next_inds]))
+        circles.set_color(colormap(pyslim.individual_ages_at(ts, frame)[inds]))
+        filled.set_color(colormap(pyslim.individual_ages_at(ts, frame)[next_inds]))
         if frame > 0:
-            new_inds = inds[ts.individual_ages_at(frame)[inds] == 0]
-            pcs = ts.individual_parents(new_inds, time=frame)
+            new_inds = inds[pyslim.individual_ages_at(ts, frame)[inds] == 0]
+            pcs = pyslim.individual_parents(ts, new_inds, time=frame)
             lc.set_paths([locs[pc,:2] for pc in pcs])
         return circles, filled, lc
 

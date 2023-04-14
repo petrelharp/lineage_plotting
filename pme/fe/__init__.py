@@ -1,5 +1,6 @@
 import fenics
 import numpy as np
+import pyslim
 
 def basis_functions(V):
     u0 = fenics.Function(V)
@@ -60,7 +61,7 @@ def pme(ts, output_times, x_bins, sigma, fenics_nx=101, fenics_ny=2, fenics_dt=0
     step_ago = ts.metadata['SLiM']['tick'] - np.min(output_times) / slim_dt - 1
     init_xy = np.array([
         ts.individual(i).location[:2]
-        for i in ts.individuals_alive_at(step_ago)
+        for i in pyslim.individuals_alive_at(ts, step_ago)
     ])
 
     # Create mesh and define function space
