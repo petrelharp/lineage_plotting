@@ -32,7 +32,7 @@ if input_times:
     end_time = float(sys.argv[3])
     num_steps = int(sys.argv[4])
 
-ts = pyslim.load(treefile)
+ts = tskit.load(treefile)
 params = ts.metadata['SLiM']['user_metadata']
 for n in params:
     if len(params[n]) == 1:
@@ -42,7 +42,7 @@ for n in params:
 dx = 0.8
 T = params['RUNTIME']
 dt = params["DT"]
-max_gen = ts.metadata["SLiM"]["generation"] - 1
+max_gen = ts.metadata["SLiM"]["tick"] - 1
 y_bins = [0, params['HEIGHT']]
 x_bins = np.arange(0, params['WIDTH'] + dx, dx)
 x_mids = x_bins[1:] - np.diff(x_bins)/2

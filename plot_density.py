@@ -65,7 +65,7 @@ size = (max_dimension * max(1.0, width/height), max_dimension * max(1.0, height/
 fig, ax = plt.subplots(figsize=size)
 ax.set_xlabel("eastings")
 ax.set_ylabel("northings")
-ax.set_title(f"density at {time_ago} ago")
+# ax.set_title(f"density at {time_ago} ago")
 
 sps.plot_density(ts, time_ago, ax, xlims=xlim, ylims=ylim, alpha=alpha)
 

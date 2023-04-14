@@ -42,7 +42,7 @@ outbase = ".".join(treefile.split(".")[:-1])
 
 ts = tskit.load(treefile)
 
-num_gens = ts.metadata['SLiM']['generation']
+num_gens = ts.metadata['SLiM']['tick']
 params = ts.metadata['SLiM']['user_metadata']
 try:
     dt = params['DT'][0]
@@ -58,9 +58,9 @@ popsize = pyslim.population_size(
         time_bins = np.arange(num_gens),
 )[:,0,:]
 
-today = ts.individuals_alive_at(0)
-has_parents = ts.has_individual_parents()
-max_time_ago = np.max(ts.individual_times[has_parents])
+today = pyslim.individuals_alive_at(ts, 0)
+has_parents = pyslim.has_individual_parents(ts)
+max_time_ago = np.max(ts.individuals_time[has_parents])
 if len(today) < num_indivs:
     raise ValueError(f"Not enough individuals: only {len(today)} alive today!")
 

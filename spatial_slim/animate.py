@@ -14,7 +14,7 @@ def animate_individuals(fig, ts, times=None, ax=None, duration=20):
     if ax is None:
         ax = fig.axes[0]
 
-    num_gens = ts.metadata['SLiM']["generation"]
+    num_gens = ts.metadata['SLiM']["tick"]
     if times is None:
         times = num_gens - np.arange(num_gens)
 
@@ -61,7 +61,7 @@ def animate_lineage(fig, ts, children, positions, time_ago_interval=None, ax=Non
     """
     if ax is None:
         ax = fig.axes[0]
-    num_gens = ts.metadata["SLiM"]["generation"]
+    num_gens = ts.metadata["SLiM"]["tick"]
     if time_ago_interval is None:
         time_ago_interval = (0.0, num_gens - 1)
 

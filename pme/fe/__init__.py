@@ -57,7 +57,7 @@ def pme(ts, output_times, x_bins, sigma, fenics_nx=101, fenics_ny=2, fenics_dt=0
     theta = ts.metadata['SLiM']['user_metadata']['THETA'][0]
     slim_dt = ts.metadata['SLiM']['user_metadata']['DT'][0]
 
-    step_ago = ts.metadata['SLiM']['generation'] - np.min(output_times) / slim_dt - 1
+    step_ago = ts.metadata['SLiM']['tick'] - np.min(output_times) / slim_dt - 1
     init_xy = np.array([
         ts.individual(i).location[:2]
         for i in ts.individuals_alive_at(step_ago)
