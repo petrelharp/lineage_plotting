@@ -108,7 +108,7 @@ def animate_lineage(fig, ts, children, positions, time_ago_interval=None, ax=Non
     ax.set_title(f"t = {(num_gens - time_ago_interval[0])*dt:.2f} (time {time_ago_interval[0]*dt:.2f} ago)")
 
     def update(frame):
-        inds = pyslim.individuals_alive_at(frame)
+        inds = pyslim.individuals_alive_at(ts, frame)
         circles.set_offsets(locs[inds,:2])
         # color based on age so far
         circles.set_color(colormap(pyslim.individual_ages_at(ts, frame)[inds]))

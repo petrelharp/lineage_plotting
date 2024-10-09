@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import argparse
 import tskit
 import numpy as np
 import spatial_slim as sps
@@ -13,42 +14,58 @@ usage = """
 Makes an animation of *lineages* moving back
 at a randomly chosen set of positions on the genome
 from the chromosomes of the given number of diploid individuals.
-Usage:
-    {} (treefile) [num indivs=3] [num positions = 1]
-where the KEY=VALUE pairs get passed to SLiM.
-""".format(sys.argv[0])
+"""
 
-num_indivs = 3
-num_positions = 1
-if len(sys.argv) < 2:
-    raise ValueError(usage)
-elif len(sys.argv) >= 3:
-    num_indivs = int(sys.argv[2])
-elif len(sys.argv) >= 4:
-    num_positions = int(sys.argv[3])
-elif len(sys.argv) > 4:
-    raise ValueError(usage)
+parser = argparse.ArgumentParser(prog=sys.argv[0], description=usage)
+parser.add_argument("treefile")
+parser.add_argument("-o", "--outfile", type=str)
+parser.add_argument("-n", "--num_indivs", default=3, type=int)
+parser.add_argument("-p", "--num_positions", default=1, type=int)
+parser.add_argument("-s", "--seed", type=int)
+parser.add_argument("-t", "--dt", type=float, help="conversion factor from ticks to time")
+parser.add_argument("-x", "--xmin", type=float, help="minimum x coordinate of sampled lineages")
+args = parser.parse_args()
 
-treefile = sys.argv[1]
-outbase = ".".join(treefile.split(".")[:-1])
+if args.outfile is None:
+    outbase = ".".join(args.treefile.split(".")[:-1])
+    args.outfile = outbase + ".lineages.mp4"
 
-ts = sps.SpatialSlimTreeSequence(tskit.load(treefile), dim=2)
+ts = sps.SpatialSlimTreeSequence(tskit.load(args.treefile), dim=2)
 
 params = ts.metadata['SLiM']['user_metadata']
-dt = params['DT'][0]
 width = params['WIDTH'][0]
 height = params['HEIGHT'][0]
+
+if args.dt is None:
+    try:
+        args.dt = params['DT']
+    except KeyError:
+        args.dt = 1.0
+
+if args.xmin is None:
+    args.xmin = 0
+
+rng = np.random.default_rng(args.seed)
+
+num_positions = min(args.num_positions, int(ts.sequence_length))
+positions = rng.choice(int(ts.sequence_length), args.num_positions)
+
+today,  = np.where(np.logical_and(
+        ts.individual_times == 0,
+        ts.individual_locations[:,0] >= args.xmin
+))
+children = np.random.choice(today, args.num_indivs)
+
 size = (8 * max(1.0, width/height), 8 * max(1.0, height/width))
 fig, ax = plt.subplots(figsize=size)
 
-today = np.where(ts.individual_times == 0)[0]
 animation = sps.animate_lineage(
     fig,
     ts, 
-    children=np.random.choice(today, num_indivs), 
-    positions=np.random.randint(0, ts.sequence_length - 1, num_positions),
+    children=children,
+    positions=positions,
     time_ago_interval=(0.0, np.max(ts.individual_times)),
-    dt=dt,
+    dt=args.dt,
 )
-animation.save(outbase + ".lineages.mp4", writer='ffmpeg')
+animation.save(args.outfile, writer='ffmpeg')
 

@@ -92,10 +92,7 @@ reproduction() {
         ind.setSpatialPosition(p1.pointUniform());
         ind.tag = 0;
     }
-    i1.evaluate();
-
-    sim.rescheduleScriptBlock(s2, start=BURNIN+1, end=BURNIN + NUMGENS);
-    sim.rescheduleScriptBlock(s99, generations=BURNIN + NUMGENS);
+    i1.evaluate(sim.subpopulations);
 
     // header info
     cat("gen" + " " + "stage" + " ");
@@ -116,7 +113,7 @@ early() {
 
 }
 
-s2 1: early() {
+(BURNIN+1):(BURNIN+NUMGENS) early() {
     // remember everyone
     sim.treeSeqRememberIndividuals(p1.individuals);
 }
@@ -129,7 +126,7 @@ s2 1: early() {
 // output
 early() {
     if (T) {
-        cat(sim.generation + " " + "early" + " ");
+        cat(sim.cycle + " " + "early" + " ");
         cat(p1.individualCount + " " + sum(p1.individuals.age == 0) + " ");
         cat(mean(p1.individuals.age) + " " + p1.individualCount/(A * W * W) + " ");
         cat(mean(p1.individuals.tagF) + " " + 1/mean(1/p1.individuals.tagF) + " " + mean(p1.individuals.tag));
@@ -139,7 +136,7 @@ early() {
 
 late() {
     if (T) {
-        cat(sim.generation + " " + "late " + " ");
+        cat(sim.cycle + " " + "late " + " ");
         cat(p1.individualCount + " " + sum(p1.individuals.age == 0) + " ");
         cat(mean(p1.individuals.age) + " " + p1.individualCount/(A * W * W) + " ");
         cat(mean(p1.individuals.tagF) + " " + 1/mean(1/p1.individuals.tagF) + " " + mean(p1.individuals.tag));
@@ -160,7 +157,7 @@ late() {
     }
 }
 
-s99 200000 late() {
+BURNIN + NUMGENS late() {
    sim.treeSeqOutput(OUTPATH, simplify=F);
    sim.simulationFinished();
 }

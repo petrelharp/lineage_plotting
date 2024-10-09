@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import argparse
 import tskit
 import numpy as np
 import spatial_slim as sps
@@ -10,17 +11,19 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 usage = """
-Usage:
-    {} (treefile)
-""".format(sys.argv[0])
+Makes an animation of the population, forwards in time.
+"""
 
-if len(sys.argv) != 2:
-    raise ValueError(usage)
+parser = argparse.ArgumentParser(prog=sys.argv[0], description=usage)
+parser.add_argument("treefile")
+parser.add_argument("-o", "--outfile", type=str)
+args = parser.parse_args()
 
-treefile = sys.argv[1]
-outbase = ".".join(treefile.split(".")[:-1])
+if args.outfile is None:
+    outbase = ".".join(args.treefile.split(".")[:-1])
+    args.outfile = outbase + ".pop.mp4"
 
-ts = tskit.load(treefile)
+ts = tskit.load(args.treefile)
 
 params = ts.metadata['SLiM']['user_metadata']
 width = params['WIDTH'][0]
@@ -29,4 +32,4 @@ size = (8 * max(1.0, width/height), 8 * max(1.0, height/width))
 
 fig, ax = plt.subplots(figsize=size)
 animation = sps.animate_individuals(fig, ts)
-animation.save(outbase + ".pop.mp4", writer='ffmpeg')
+animation.save(args.outfile, writer='ffmpeg')

@@ -6,7 +6,7 @@ import scipy.sparse as sparse
 class SpatialSlimTreeSequence(tskit.TreeSequence):
 
     def __init__(self, ts, dim=3):
-        super(SpatialSlimTreeSequence, self).__init__(ts)
+        super(SpatialSlimTreeSequence, self).__init__(ts._ll_tree_sequence)
         self.dim = dim
 
     def individual_distance_to_point(self, point):
@@ -30,10 +30,15 @@ class SpatialSlimTreeSequence(tskit.TreeSequence):
 
         :param float center: The coordinates of the center.
         :param float radius: The radius of the circle.
+        :param float time: The time to look at; defaults to no constraint.
         """
         dists = self.individual_distance_to_point(center)
-        alive = pyslim.individuals_alive_at(self, time)
-        return alive[dists <= radius]
+        if time is None:
+            out, = np.where(dists <= radius)
+        else:
+            alive = pyslim.individuals_alive_at(self, time)
+            out = alive[dists <= radius]
+        return out
 
     def node_children_dict(self, left=0.0, right=None):
         """

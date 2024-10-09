@@ -101,8 +101,8 @@ initialize() {
 }
 
 1 first() {
-	sim.rescheduleScriptBlock(s98, generations=unique(asInteger(seq(1 + BURNIN / DT, (BURNIN + RUNTIME) / DT - 1, length=NUM_SNAPSHOTS))));
-	sim.rescheduleScriptBlock(s99, generations=asInteger((BURNIN + RUNTIME) / DT)); // end
+	community.rescheduleScriptBlock(s98, ticks=unique(asInteger(seq(1 + BURNIN / DT, (BURNIN + RUNTIME) / DT - 1, length=NUM_SNAPSHOTS))));
+	community.rescheduleScriptBlock(s99, ticks=asInteger((BURNIN + RUNTIME) / DT)); // end
 }
 
 1 late() {
@@ -118,8 +118,8 @@ initialize() {
 }
 
 late() {
-	i1.evaluate();
-	i2.evaluate();
+	i1.evaluate(sim.subpopulations);
+	i2.evaluate(sim.subpopulations);
 	inds = p1.individuals;
 	inds.tagF = i1.localPopulationDensity(inds) / K;
 }
@@ -168,7 +168,7 @@ late() {
 }
 
 late() {
-	if ((sim.generation >= BURNIN / DT) & !DEBUG)
+	if ((sim.cycle >= BURNIN / DT) & !DEBUG)
 		sim.treeSeqRememberIndividuals(p1.individuals, permanent=T);
 }
 
